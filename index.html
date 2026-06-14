@@ -130,6 +130,25 @@ body{font-family:var(--font);background:linear-gradient(135deg,#edf0fa 0%,#f4f0f
 
 .sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,0.07)}
 .sidebar-time{font-size:11px;color:rgba(255,255,255,0.25);text-align:center}
+.sync-indicator{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:8px;margin:0 0 8px;
+  font-size:12px;font-weight:700;font-family:var(--font);
+  transition:all 0.4s;
+}
+.sync-indicator .sync-dot{
+  width:9px;height:9px;border-radius:50%;flex-shrink:0;
+  transition:background 0.4s;
+}
+.sync-indicator.syncing{background:rgba(26,86,219,0.2);color:#7ec4f8;border:1px solid rgba(26,86,219,0.3)}
+.sync-indicator.syncing .sync-dot{background:#7ec4f8;animation:sync-pulse 1s infinite}
+.sync-indicator.ok{background:rgba(10,124,85,0.2);color:#6dd6aa;border:1px solid rgba(10,124,85,0.3)}
+.sync-indicator.ok .sync-dot{background:#6dd6aa}
+.sync-indicator.error{background:rgba(200,25,58,0.2);color:#f9a0b2;border:1px solid rgba(200,25,58,0.3)}
+.sync-indicator.error .sync-dot{background:#f9a0b2}
+.sync-indicator.offline{background:rgba(184,96,0,0.2);color:#ffc87a;border:1px solid rgba(184,96,0,0.3)}
+.sync-indicator.offline .sync-dot{background:#ffc87a}
+@keyframes sync-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
 
 /* ======================================================= */
 /* MAIN AREA */
@@ -955,6 +974,10 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
       <button onclick="clearStorage()" style="width:100%;padding:8px;background:rgba(181,42,42,0.18);color:#f0a0a0;border:1px solid rgba(181,42,42,0.25);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="مسح البيانات المحفوظة تلقائيًا والرجوع للافتراضي">
         🗑️ مسح الحفظ التلقائي
       </button>
+    </div>
+    <div id="sync-indicator" class="sync-indicator syncing">
+      <div class="sync-dot"></div>
+      <span id="sync-text">جارٍ الاتصال بالسحابة...</span>
     </div>
     <div class="sidebar-time" id="sidebar-clock"></div>
   </div>
@@ -1847,9 +1870,10 @@ function saveToStorage(){
   if(_fbSaveTimer) clearTimeout(_fbSaveTimer);
   _fbSaveTimer = setTimeout(()=>{
     try{
+      fbSetSyncing('جارٍ الحفظ على السحابة...');
       const snap=buildSnap();
       fbGetDb().ref(FB_PATH).set(snap)
-        .then(()=>{ fbShowSyncBadge('✅ تم الحفظ على السحابة','#0a7c55'); })
+        .then(()=>{ fbShowSyncBadge('✅ تم الحفظ — آخر تحديث: '+new Date().toLocaleTimeString('ar-EG'),'#0a7c55'); })
         .catch(e=>{ console.warn('Firebase save error:',e); fbShowSyncBadge('⚠️ تعذر الحفظ على السحابة','#c8193a'); });
     }catch(e){ console.warn('Firebase error:',e); }
   }, 1500);
@@ -1869,24 +1893,25 @@ function buildSnap(){
 }
 
 function fbShowSyncBadge(msg, color){
-  let badge = document.getElementById('fb-sync-badge');
-  if(!badge){
-    badge = document.createElement('div');
-    badge.id = 'fb-sync-badge';
-    Object.assign(badge.style,{
-      position:'fixed',bottom:'16px',left:'16px',
-      padding:'7px 16px',borderRadius:'30px',
-      fontFamily:'Cairo,sans-serif',fontSize:'12px',fontWeight:'700',
-      color:'#fff',zIndex:'99998',boxShadow:'0 4px 14px rgba(0,0,0,0.2)',
-      transition:'opacity 0.5s',pointerEvents:'none'
-    });
-    document.body.appendChild(badge);
-  }
-  badge.textContent = msg;
-  badge.style.background = color||'#0a7c55';
-  badge.style.opacity = '1';
-  clearTimeout(badge._t);
-  badge._t = setTimeout(()=>{ badge.style.opacity='0'; }, 3000);
+  // تحديث مؤشر المزامنة في الشريط الجانبي
+  const ind  = document.getElementById('sync-indicator');
+  const txt  = document.getElementById('sync-text');
+  if(!ind||!txt) return;
+  txt.textContent = msg;
+  ind.className = 'sync-indicator';
+  if(color==='#0a7c55')       ind.classList.add('ok');
+  else if(color==='#c8193a')  ind.classList.add('error');
+  else if(color==='#b86000')  ind.classList.add('offline');
+  else if(color==='#1a56db')  ind.classList.add('syncing');
+  else                        ind.classList.add('ok');
+}
+
+function fbSetSyncing(msg){
+  const ind = document.getElementById('sync-indicator');
+  const txt = document.getElementById('sync-text');
+  if(!ind||!txt) return;
+  ind.className = 'sync-indicator syncing';
+  txt.textContent = msg || 'جارٍ الحفظ على السحابة...';
 }
 
 function loadFromStorage(){
