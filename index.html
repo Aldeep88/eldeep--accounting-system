@@ -6,6 +6,9 @@
 <title>Deep System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1787,7 +1790,7 @@ function closePrintOverlay(){
 }
 
 // ============================================================
-// LOCAL STORAGE — حفظ تلقائي
+// FIREBASE — مزامنة تلقائية على السحابة
 // ============================================================
 const STORAGE_KEY = 'DeepSystem_autoSave';
 
@@ -1798,46 +1801,168 @@ let companySub  = 'Accounting System v1.0';
 function getSysName(){ return companyName || 'Deep System'; }
 function getSysSub(){  return companySub  || 'Accounting System v1.0'; }
 
+// ── Firebase Config ──
+const FB_CONFIG = {
+  apiKey: "AIzaSyDUrcBMGo2N5V1T4a1hCaf8Q-6iNUK4qas",
+  authDomain: "eldeep-accounting-system-31dc5.firebaseapp.com",
+  databaseURL: "https://eldeep-accounting-system-31dc5-default-rtdb.firebaseio.com",
+  projectId: "eldeep-accounting-system-31dc5",
+  storageBucket: "eldeep-accounting-system-31dc5.firebasestorage.app",
+  messagingSenderId: "628703285080",
+  appId: "1:628703285080:web:5d2a446831ef36af319f2d"
+};
+const FB_PATH = 'deepSystem/data';
+let _fbDb = null;
+let _fbSaveTimer = null;
+let _fbInited = false;
+
+function fbGetDb(){
+  if(_fbDb) return _fbDb;
+  if(typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded yet');
+  try{
+    const app = firebase.initializeApp(FB_CONFIG);
+    _fbDb = firebase.database(app);
+  }catch(e){
+    try{ _fbDb = firebase.database(); }catch(e2){ throw new Error('Firebase init failed: '+e2.message); }
+  }
+  return _fbDb;
+}
+
+// انتظر Firebase SDK يتحمل ثم ابدأ التزامن
+function fbWaitAndLoad(){
+  if(typeof firebase !== 'undefined'){
+    _loadFromFirebase();
+  } else {
+    // Firebase SDK لسه بيتحمل — استنى 200ms وجرب تاني
+    setTimeout(fbWaitAndLoad, 200);
+  }
+}
+
+// ── حفظ على Firebase مع debounce 1.5 ثانية ──
 function saveToStorage(){
   try{
-    const snap={
-      version:'1.0',
-      savedAt:new Date().toISOString(),
-      accounts:[...accounts],
-      journals:[...journals],
-      costs:[...costs],
-      openingBalances:{...openingBalances},
-      companyName, companySub,
-      nextAccId,nextJrnId,nextCostId
-    };
+    const snap=buildSnap();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
-  }catch(e){ console.warn('تعذر الحفظ التلقائي:',e); }
+  }catch(e){}
+  if(_fbSaveTimer) clearTimeout(_fbSaveTimer);
+  _fbSaveTimer = setTimeout(()=>{
+    try{
+      const snap=buildSnap();
+      fbGetDb().ref(FB_PATH).set(snap)
+        .then(()=>{ fbShowSyncBadge('✅ تم الحفظ على السحابة','#0a7c55'); })
+        .catch(e=>{ console.warn('Firebase save error:',e); fbShowSyncBadge('⚠️ تعذر الحفظ على السحابة','#c8193a'); });
+    }catch(e){ console.warn('Firebase error:',e); }
+  }, 1500);
+}
+
+function buildSnap(){
+  return {
+    version:'1.0',
+    savedAt:new Date().toISOString(),
+    accounts:[...accounts],
+    journals:[...journals],
+    costs:[...costs],
+    openingBalances:{...openingBalances},
+    companyName, companySub,
+    nextAccId,nextJrnId,nextCostId
+  };
+}
+
+function fbShowSyncBadge(msg, color){
+  let badge = document.getElementById('fb-sync-badge');
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id = 'fb-sync-badge';
+    Object.assign(badge.style,{
+      position:'fixed',bottom:'16px',left:'16px',
+      padding:'7px 16px',borderRadius:'30px',
+      fontFamily:'Cairo,sans-serif',fontSize:'12px',fontWeight:'700',
+      color:'#fff',zIndex:'99998',boxShadow:'0 4px 14px rgba(0,0,0,0.2)',
+      transition:'opacity 0.5s',pointerEvents:'none'
+    });
+    document.body.appendChild(badge);
+  }
+  badge.textContent = msg;
+  badge.style.background = color||'#0a7c55';
+  badge.style.opacity = '1';
+  clearTimeout(badge._t);
+  badge._t = setTimeout(()=>{ badge.style.opacity='0'; }, 3000);
 }
 
 function loadFromStorage(){
+  const localLoaded = _loadFromLocal();
+  // Firebase SDK ممكن يكون لسه بيتحمل — نستناه
+  setTimeout(fbWaitAndLoad, 300);
+  return localLoaded;
+}
+
+function _loadFromLocal(){
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw) return false;
     const data=JSON.parse(raw);
     if(!data.accounts||!data.journals||!data.costs) return false;
-    accounts.length=0; data.accounts.forEach(a=>accounts.push(a));
-    journals.length=0; data.journals.forEach(j=>{
-      // تصحيح: تحويل IDs للأرقام لو اتحفظت كنصوص
-      if(j.lines) j.lines.forEach(l=>{
-        if(l.accId)    l.accId    = Number(l.accId);
-        if(l.subAccId) l.subAccId = Number(l.subAccId);
-      });
-      journals.push(j);
-    });
-    costs.length=0;    data.costs.forEach(c=>costs.push(c));
-    if(data.nextAccId)  nextAccId=data.nextAccId;
-    if(data.nextJrnId)  nextJrnId=data.nextJrnId;
-    if(data.nextCostId) nextCostId=data.nextCostId;
-    if(data.openingBalances) Object.assign(openingBalances, data.openingBalances);
-    if(data.companyName && data.companyName !== 'Deep System') companyName=data.companyName;
-    if(data.companySub)  companySub=data.companySub;
+    _applyData(data);
     return true;
-  }catch(e){ console.warn('تعذر تحميل البيانات المحفوظة:',e); return false; }
+  }catch(e){ return false; }
+}
+
+function _loadFromFirebase(){
+  try{
+    fbGetDb().ref(FB_PATH).once('value').then(snap=>{
+      const data = snap.val();
+      if(!data||!data.accounts||!data.journals||!data.costs){
+        const raw=localStorage.getItem(STORAGE_KEY);
+        if(raw){
+          try{
+            const local=JSON.parse(raw);
+            fbGetDb().ref(FB_PATH).set(local);
+            fbShowSyncBadge('☁️ تم رفع بياناتك المحلية للسحابة','#1a56db');
+          }catch(e){}
+        } else {
+          if(!_fbInited){ _fbInited=true; setTimeout(()=>showDataRescueDialog(),600); }
+        }
+        return;
+      }
+      _fbInited = true;
+      const fbTime = data.savedAt ? new Date(data.savedAt).getTime() : 0;
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      const localTime = localRaw ? (()=>{ try{ return new Date(JSON.parse(localRaw).savedAt).getTime(); }catch(e){return 0;} })() : 0;
+      if(fbTime >= localTime){
+        _applyData(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        applySysName();
+        renderAccounts();
+        renderCosts();
+        renderJournals();
+        fbShowSyncBadge('✅ تم تحميل بياناتك من السحابة','#0a7c55');
+      } else {
+        fbGetDb().ref(FB_PATH).set(JSON.parse(localRaw));
+        fbShowSyncBadge('☁️ تم مزامنة بياناتك المحلية','#1a56db');
+      }
+    }).catch(e=>{
+      console.warn('Firebase load error:',e);
+      fbShowSyncBadge('⚠️ تعذر الاتصال بالسحابة','#b86000');
+    });
+  }catch(e){ console.warn('Firebase init error:',e); }
+}
+
+function _applyData(data){
+  accounts.length=0; data.accounts.forEach(a=>accounts.push(a));
+  journals.length=0; data.journals.forEach(j=>{
+    if(j.lines) j.lines.forEach(l=>{
+      if(l.accId)    l.accId    = Number(l.accId);
+      if(l.subAccId) l.subAccId = Number(l.subAccId);
+    });
+    journals.push(j);
+  });
+  costs.length=0; data.costs.forEach(c=>costs.push(c));
+  if(data.nextAccId)  nextAccId=data.nextAccId;
+  if(data.nextJrnId)  nextJrnId=data.nextJrnId;
+  if(data.nextCostId) nextCostId=data.nextCostId;
+  if(data.openingBalances) Object.assign(openingBalances, data.openingBalances);
+  if(data.companyName && data.companyName !== 'Deep System') companyName=data.companyName;
+  if(data.companySub) companySub=data.companySub;
 }
 
 // ============================================================
@@ -1890,8 +2015,12 @@ function saveSettings(){
 }
 
 function clearStorage(){
-  if(confirm('⚠️ هل تريد مسح كل البيانات المحفوظة تلقائيًا والرجوع للبيانات الافتراضية؟'))
-  { localStorage.removeItem(STORAGE_KEY); location.reload(); }
+  if(confirm('⚠️ هل تريد مسح كل البيانات المحفوظة والرجوع للبيانات الافتراضية؟ سيتم المسح من السحابة ومن الجهاز.'))
+  {
+    localStorage.removeItem(STORAGE_KEY);
+    try{ fbGetDb().ref(FB_PATH).remove(); }catch(e){}
+    location.reload();
+  }
 }
 
 // ============================================================
@@ -5171,7 +5300,7 @@ function tb_printPDF(){
 
 // تحميل البيانات المحفوظة عند فتح البرنامج
 (function initApp(){
-  const loaded = loadFromStorage();
+  const loaded = loadFromStorage(); // يحمل محلياً ويبدأ تحميل Firebase
   abInit();
   applySysName();
   renderAccounts();
@@ -5179,12 +5308,9 @@ function tb_printPDF(){
   renderJournals();
 
   if(loaded){
-    // ── بيانات موجودة — عرض رسالة تأكيد خفيفة ──
-    showToast('✅ تم تحميل بياناتك المحفوظة', 'tb');
-  } else {
-    // ── لا توجد بيانات محفوظة — اعرض نافذة الاستيراد ──
-    setTimeout(()=> showDataRescueDialog(), 600);
+    showToast('✅ تم تحميل بياناتك — جارٍ المزامنة مع السحابة...', 'tb');
   }
+  // لو مفيش بيانات محلية، Firebase هيعرض نافذة الاستيراد تلقائياً لو مفيش في السحابة كمان
 })();
 
 // ════════════════════════════════════════════════════════
