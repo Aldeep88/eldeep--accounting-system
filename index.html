@@ -1838,6 +1838,7 @@ const FB_PATH = 'deepSystem/data';
 let _fbDb = null;
 let _fbSaveTimer = null;
 let _fbInited = false;
+let _fbIsSaving = false;   // بيمنع الـ listener يعمل loop لما بنحفظ
 
 function fbGetDb(){
   if(_fbDb) return _fbDb;
@@ -1872,10 +1873,18 @@ function saveToStorage(){
     try{
       fbSetSyncing('جارٍ الحفظ على السحابة...');
       const snap=buildSnap();
+      _fbIsSaving = true;
       fbGetDb().ref(FB_PATH).set(snap)
-        .then(()=>{ fbShowSyncBadge('✅ تم الحفظ — آخر تحديث: '+new Date().toLocaleTimeString('ar-EG'),'#0a7c55'); })
-        .catch(e=>{ console.warn('Firebase save error:',e); fbShowSyncBadge('⚠️ تعذر الحفظ على السحابة','#c8193a'); });
-    }catch(e){ console.warn('Firebase error:',e); }
+        .then(()=>{
+          _fbIsSaving = false;
+          fbShowSyncBadge('✅ تم الحفظ — '+new Date().toLocaleTimeString('ar-EG'),'#0a7c55');
+        })
+        .catch(e=>{
+          _fbIsSaving = false;
+          console.warn('Firebase save error:',e);
+          fbShowSyncBadge('⚠️ تعذر الحفظ على السحابة','#c8193a');
+        });
+    }catch(e){ _fbIsSaving=false; console.warn('Firebase error:',e); }
   }, 1500);
 }
 
@@ -1932,43 +1941,74 @@ function _loadFromLocal(){
   }catch(e){ return false; }
 }
 
+// هل أول اتصال اتعمل؟
+let _fbFirstLoad = true;
+
 function _loadFromFirebase(){
   try{
-    fbGetDb().ref(FB_PATH).once('value').then(snap=>{
+    const db = fbGetDb();
+
+    // ── real-time listener — بيشتغل كل ما في تغيير على السحابة ──
+    db.ref(FB_PATH).on('value', snap=>{
       const data = snap.val();
-      if(!data||!data.accounts||!data.journals||!data.costs){
-        const raw=localStorage.getItem(STORAGE_KEY);
+
+      // ── السحابة فاضية — ارفع البيانات المحلية ──
+      if(!data || !data.accounts || !data.journals || !data.costs){
+        const raw = localStorage.getItem(STORAGE_KEY);
         if(raw){
           try{
-            const local=JSON.parse(raw);
-            fbGetDb().ref(FB_PATH).set(local);
-            fbShowSyncBadge('☁️ تم رفع بياناتك المحلية للسحابة','#1a56db');
+            const local = JSON.parse(raw);
+            db.ref(FB_PATH).set(local);
+            fbShowSyncBadge('☁️ تم رفع بياناتك للسحابة','#1a56db');
           }catch(e){}
         } else {
-          if(!_fbInited){ _fbInited=true; setTimeout(()=>showDataRescueDialog(),600); }
+          if(!_fbInited){
+            _fbInited = true;
+            setTimeout(()=>showDataRescueDialog(), 600);
+          }
         }
+        _fbFirstLoad = false;
         return;
       }
+
       _fbInited = true;
-      const fbTime = data.savedAt ? new Date(data.savedAt).getTime() : 0;
-      const localRaw = localStorage.getItem(STORAGE_KEY);
-      const localTime = localRaw ? (()=>{ try{ return new Date(JSON.parse(localRaw).savedAt).getTime(); }catch(e){return 0;} })() : 0;
-      if(fbTime >= localTime){
-        _applyData(data);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        applySysName();
-        renderAccounts();
-        renderCosts();
-        renderJournals();
-        fbShowSyncBadge('✅ تم تحميل بياناتك من السحابة','#0a7c55');
+
+      // ── أول تحميل: قارن التوارخ وخد الأحدث ──
+      if(_fbFirstLoad){
+        _fbFirstLoad = false;
+        const fbTime    = data.savedAt ? new Date(data.savedAt).getTime() : 0;
+        const localRaw  = localStorage.getItem(STORAGE_KEY);
+        const localTime = localRaw
+          ? (()=>{ try{ return new Date(JSON.parse(localRaw).savedAt).getTime(); }catch(e){return 0;} })()
+          : 0;
+
+        if(fbTime >= localTime){
+          // السحابة أحدث أو متساوية — حمّل من السحابة
+          _applyData(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          applySysName(); renderAccounts(); renderCosts(); renderJournals();
+          fbShowSyncBadge('✅ تم التحميل من السحابة','#0a7c55');
+        } else {
+          // المحلي أحدث — ارفعه للسحابة
+          db.ref(FB_PATH).set(JSON.parse(localRaw));
+          fbShowSyncBadge('☁️ تم رفع بياناتك المحلية للسحابة','#1a56db');
+        }
+
       } else {
-        fbGetDb().ref(FB_PATH).set(JSON.parse(localRaw));
-        fbShowSyncBadge('☁️ تم مزامنة بياناتك المحلية','#1a56db');
+        // ── تحديث تلقائي: جاء تغيير من جهاز تاني — طبّقه لو مش بنحفظ دلوقتي ──
+        if(!_fbIsSaving){
+          _applyData(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          applySysName(); renderAccounts(); renderCosts(); renderJournals();
+          fbShowSyncBadge('🔄 تحديث من جهاز آخر — '+new Date().toLocaleTimeString('ar-EG'),'#1a56db');
+        }
       }
-    }).catch(e=>{
-      console.warn('Firebase load error:',e);
+
+    }, err=>{
+      console.warn('Firebase listener error:', err);
       fbShowSyncBadge('⚠️ تعذر الاتصال بالسحابة','#b86000');
     });
+
   }catch(e){ console.warn('Firebase init error:',e); }
 }
 
