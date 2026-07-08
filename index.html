@@ -1784,6 +1784,21 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
 </div>
 </div>
 
+<!-- ═══════════ استرداد قيود (إكسيل أو ملف البرنامج) ═══════════ -->
+<div class="overlay hidden" id="restore-jrn-overlay" onclick="if(event.target===this)closeRestoreJrnModal()">
+<div class="modal" style="max-width:900px">
+  <div class="modal-header">
+    <div class="modal-header-accent" style="background:#6d28d9"></div>
+    <h2>♻️ استرداد قيود</h2>
+    <button class="btn-icon" onclick="closeRestoreJrnModal()">✕</button>
+  </div>
+  <div class="modal-body" id="restore-jrn-body" style="max-height:78vh;overflow-y:auto">
+    <!-- يتغيّر محتواه حسب الخطوة عن طريق JS -->
+  </div>
+  <div class="modal-footer" id="restore-jrn-footer"></div>
+</div>
+</div>
+
 </div><!-- /app -->
 
 <script>
@@ -2415,6 +2430,8 @@ function saveSettings(){
 function clearStorage(){
   if(confirm('⚠️ هل تريد مسح كل البيانات المحفوظة والرجوع للبيانات الافتراضية؟ سيتم المسح من السحابة ومن الجهاز.'))
   {
+    _downloadSafetyBackupBeforeRestore();
+    alert('📥 تم تنزيل نسخة احتياطية من بياناتك الحالية قبل المسح — احتفظ بيها.');
     localStorage.removeItem(STORAGE_KEY);
     try{ fbGetDb().ref(FB_PATH).remove(); }catch(e){}
     location.reload();
@@ -2825,6 +2842,7 @@ const pageConfig = {
     <div class="export-group">
       <button class="btn btn-jrn" onclick="openJrnModal()">+ قيد جديد</button>
       <button class="btn" onclick="openXlsxImportModal()" style="color:#0a7c55;border-color:#8fd9b6" title="استيراد قيود من ملف إكسيل">📥 استيراد إكسيل</button>
+      <button class="btn" onclick="openRestoreJrnModal()" style="color:#6d28d9;border-color:#c4b0f8" title="استرداد قيود من نسخة احتياطية (إكسيل أو ملف البرنامج)">♻️ استرداد قيود</button>
       <div class="export-sep"></div>
       <button class="btn btn-excel" onclick="exportExcel_journals()" title="تصدير Excel">📊 Excel</button>
       <button class="btn btn-json" onclick="exportJSON_journals()" title="حفظ بصيغة البرنامج">💾 حفظ</button>
@@ -3350,6 +3368,19 @@ function exportJSON_full(){
   _download(_fname('DeepSystem_backup','dsp'),JSON.stringify(snap,null,2),'application/json');
 }
 
+// نسخة احتياطية تلقائية تتنزل قبل أي استبدال كامل للبيانات (حماية من فقد شغل غير محفوظ في مكان تاني)
+function _downloadSafetyBackupBeforeRestore(){
+  try{
+    const snap = {type:'DeepSystem_full', savedAt:new Date().toISOString(), accounts:[...accounts], journals:[...journals], costs:[...costs], openingBalances:{...openingBalances}, companyName, companySub, nextAccId, nextJrnId, nextCostId};
+    const blob = new Blob([JSON.stringify(snap,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+    a.download = 'نسخة_قبل_الاستعادة_'+stamp+'.dsp';
+    a.click();
+  }catch(e){ console.warn('safety backup error', e); }
+}
+
 function importJSON(){
   const input=document.createElement('input');
   input.type='file';
@@ -3363,6 +3394,8 @@ function importJSON(){
         const data=JSON.parse(ev.target.result);
         if(data.type==='DeepSystem_full'){
           if(!confirm('سيتم استبدال كل البيانات الحالية بالنسخة المحفوظة. متأكد؟'))return;
+          _downloadSafetyBackupBeforeRestore();
+          alert('📥 تم تنزيل نسخة احتياطية من بياناتك الحالية أولاً (قبل الاستبدال) في مجلد التنزيلات — احتفظ بيها لو احتجتها.');
           accounts.length=0; data.accounts.forEach(a=>accounts.push(a));
           costs.length=0;    data.costs.forEach(c=>costs.push(c));
           journals.length=0; data.journals.forEach(j=>{
@@ -3379,6 +3412,8 @@ function importJSON(){
           // صيغة تصدير "نسخة احتياطية" من صفحة القيود (بدون حقل type) — نعاملها كاستعادة كاملة
           const dateInfo = data.exportDate ? ('\nتاريخ التصدير: '+new Date(data.exportDate).toLocaleString('ar-EG')) : '';
           if(!confirm('هذا ملف نسخة احتياطية كاملة (حسابات + قيود + مراكز تكلفة).'+dateInfo+'\nسيتم استبدال كل البيانات الحالية بمحتوى هذا الملف ('+data.journals.length+' قيد). متأكد؟'))return;
+          _downloadSafetyBackupBeforeRestore();
+          alert('📥 تم تنزيل نسخة احتياطية من بياناتك الحالية أولاً (قبل الاستبدال) في مجلد التنزيلات — احتفظ بيها لو احتجتها.');
           _pushUndo('استعادة نسخة احتياطية من ملف ('+data.journals.length+' قيد)');
           accounts.length=0; data.accounts.forEach(a=>accounts.push(a));
           costs.length=0;    data.costs.forEach(c=>costs.push(c));
@@ -4348,6 +4383,307 @@ function xlsxConfirmImport(){
   renderJournals();
   saveToStorage();
   showToast('✅ تم استيراد '+entries.length+' قيد من الإكسيل بنجاح', 'jrn');
+}
+
+
+// ============================================================
+// استرداد قيود (Restore) — من ملف إكسيل مُصدَّر من هذا النظام أو ملف بصيغة البرنامج (.json/.dsp)
+// ============================================================
+let restoreJrnState = {entries:[]};
+
+function openRestoreJrnModal(){
+  restoreJrnState = {entries:[]};
+  document.getElementById('restore-jrn-overlay').classList.remove('hidden');
+  restoreJrnRenderStep1();
+}
+function closeRestoreJrnModal(){
+  document.getElementById('restore-jrn-overlay').classList.add('hidden');
+}
+
+function restoreJrnRenderStep1(){
+  document.getElementById('restore-jrn-body').innerHTML = `
+    <div style="background:#f0ecfe;border:1.5px solid #c4b0f8;border-radius:10px;padding:12px 16px;font-size:12.5px;color:#4a1aaa;margin-bottom:16px">
+      <b>💡 إزاي بتشتغل:</b> ارفع ملف نسخة احتياطية للقيود — إما ملف إكسيل مُصدَّر من هذه الصفحة بالذات (زر 📊 Excel)، أو ملف بصيغة البرنامج (.json/.dsp من زر 💾 حفظ).
+      وبعد كده هتقدر تختار: تضيف القيود دي على القيود الحالية (وأي قيد يكون مكرر ومطابق لقيد موجود بالفعل هيترفض تلقائيًا)، أو تستبدل بيها كل القيود القديمة نهائيًا.
+    </div>
+    <div style="border:2px dashed var(--border2);border-radius:12px;padding:36px 20px;text-align:center;background:var(--fog)">
+      <div style="font-size:34px;margin-bottom:10px">♻️</div>
+      <div style="font-weight:700;color:var(--ink2);margin-bottom:12px">اختر ملف الاسترداد (إكسيل أو ملف البرنامج)</div>
+      <input type="file" id="restore-jrn-file-inp" accept=".xlsx,.xls,.csv,.json,.dsp" style="display:none" onchange="restoreJrnHandleFile(this)">
+      <button class="btn btn-jrn" onclick="document.getElementById('restore-jrn-file-inp').click()">📂 اختيار ملف</button>
+      <div id="restore-jrn-file-name" style="margin-top:10px;font-size:12px;color:var(--ink3)"></div>
+    </div>
+  `;
+  document.getElementById('restore-jrn-footer').innerHTML = `
+    <button class="btn" onclick="closeRestoreJrnModal()">إلغاء</button>
+  `;
+}
+
+function restoreJrnHandleFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const nameLower = file.name.toLowerCase();
+  const nameEl = document.getElementById('restore-jrn-file-name');
+  if(nameEl) nameEl.textContent = '⏳ جارٍ قراءة: ' + file.name;
+
+  if(nameLower.endsWith('.json') || nameLower.endsWith('.dsp')){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const data = JSON.parse(e.target.result);
+        const entries = restoreJrnNormalizeJson(data);
+        if(!entries.length){ alert('⚠️ الملف لا يحتوي على أي قيود يمكن قراءتها. تأكد إنه ملف نسخة احتياطية للقيود من نفس البرنامج.'); return; }
+        restoreJrnState.entries = entries;
+        restoreJrnRenderStep2();
+      }catch(err){
+        console.error(err);
+        alert('❌ خطأ في قراءة الملف: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  } else if(nameLower.endsWith('.xlsx') || nameLower.endsWith('.xls') || nameLower.endsWith('.csv')){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array', cellDates:true});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false});
+        const entries = restoreJrnParseExcelRows(raw);
+        if(!entries.length){ alert('⚠️ لم يتم العثور على أي قيود بالشكل المتعارف عليه في هذا الملف.\nتأكد إن الملف مُصدَّر من صفحة القيود بنفس هذا النظام (زر 📊 Excel).'); return; }
+        restoreJrnState.entries = entries;
+        restoreJrnRenderStep2();
+      }catch(err){
+        console.error(err);
+        alert('❌ حصل خطأ في قراءة الملف: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    alert('⚠️ صيغة الملف غير مدعومة. الرجاء اختيار ملف إكسيل (.xlsx/.xls) أو ملف بصيغة البرنامج (.json/.dsp)');
+  }
+}
+
+// ─── تطبيع ملف JSON/DSP (بصيغة البرنامج نفسه) لقائمة قيود موحّدة ───
+function restoreJrnNormalizeJson(data){
+  let rawList = [];
+  if(Array.isArray(data)) rawList = data;
+  else if(Array.isArray(data.journals)) rawList = data.journals;
+  else if(data && data.type==='journals' && Array.isArray(data.data)) rawList = data.data;
+  else return [];
+
+  return rawList.filter(j=> j && Array.isArray(j.lines) && j.lines.length).map(j=>{
+    const lines = j.lines.map(l=>({
+      accId: l.accId!=null && l.accId!=='' ? Number(l.accId) : '',
+      subAccId: l.subAccId!=null && l.subAccId!=='' ? Number(l.subAccId) : '',
+      branch: l.branch || '',
+      source: l.source || '',
+      dr: +l.dr || 0,
+      cr: +l.cr || 0,
+      note: l.note || ''
+    }));
+    return {
+      date: j.date || new Date().toISOString().split('T')[0],
+      desc: j.desc || '',
+      notes: j.notes || '',
+      branch: j.branch || '',
+      type: j.type || 'قيد عادي',
+      lines,
+      totalDr: lines.reduce((s,l)=>s+l.dr,0),
+      totalCr: lines.reduce((s,l)=>s+l.cr,0)
+    };
+  });
+}
+
+// ─── تحليل ملف إكسيل (بشكل تصدير صفحة القيود نفسها — زر 📊 Excel) لقائمة قيود موحّدة ───
+function restoreJrnParseExcelRows(raw){
+  let headerIdx = -1, headers = [];
+  for(let i=0;i<raw.length;i++){
+    const row = raw[i] || [];
+    if(row.some(c=> String(c).trim()==='رقم القيد')){
+      headerIdx = i;
+      headers = row.map(h=> String(h||'').trim());
+      break;
+    }
+  }
+  if(headerIdx===-1) return [];
+
+  const findCol = (kw)=> headers.findIndex(h=> h.includes(kw));
+  const numIdx   = findCol('رقم القيد');
+  const dateIdx  = findCol('تاريخ');
+  const descIdx  = findCol('بيان');
+  const subIdx   = findCol('الحساب الفرعي');
+  const mainIdx  = findCol('الحساب الرئيسي');
+  const drIdx    = headers.findIndex(h=> h==='مدين');
+  const crIdx    = headers.findIndex(h=> h==='دائن');
+  const costIdx  = findCol('تكلفة');
+
+  const cleanNum = (v)=> xlsxParseNum(String(v==null?'':v).replace(/[—-]/g,'').trim()===''?'0':String(v));
+  const cleanCode = (v)=> String(v||'').split(/\s*-\s*/)[0].trim();
+
+  const entries = [];
+  let current = null;
+
+  for(let i=headerIdx+1;i<raw.length;i++){
+    const row = raw[i];
+    if(!row || row.every(c=> String(c).trim()==='')) continue;
+
+    const numCell = numIdx>=0 ? String(row[numIdx]||'').trim() : '';
+    const isNewJournal = numCell!=='' || current===null;
+
+    if(isNewJournal){
+      if(current) entries.push(current);
+      current = {
+        date: dateIdx>=0 ? xlsxParseDate(row[dateIdx]) : new Date().toISOString().split('T')[0],
+        desc: descIdx>=0 ? String(row[descIdx]||'').trim() : '',
+        notes:'', branch:'', type:'قيد عادي', lines:[]
+      };
+    }
+
+    let accId='', subAccId='';
+    if(subIdx>=0){
+      const subCell = String(row[subIdx]||'').trim();
+      if(subCell && subCell!=='—'){
+        const subAcc = accounts.find(a=> a.code===cleanCode(subCell));
+        if(subAcc){ subAccId = subAcc.id; accId = subAcc.parent || subAcc.id; }
+      }
+    }
+    if(!accId && mainIdx>=0){
+      const mainCell = String(row[mainIdx]||'').trim();
+      if(mainCell && mainCell!=='—'){
+        const mainAcc = accounts.find(a=> a.code===cleanCode(mainCell));
+        if(mainAcc) accId = mainAcc.id;
+      }
+    }
+
+    const drVal = drIdx>=0 ? cleanNum(row[drIdx]) : 0;
+    const crVal = crIdx>=0 ? cleanNum(row[crIdx]) : 0;
+
+    let branchCode='';
+    if(costIdx>=0){
+      const costCell = String(row[costIdx]||'').trim();
+      if(costCell && costCell!=='—'){
+        const cAcc = costs.find(c=> c.code===cleanCode(costCell));
+        if(cAcc) branchCode = cAcc.code;
+      }
+    }
+
+    if(current && accId && (drVal>0 || crVal>0)){
+      current.lines.push({accId, subAccId, branch:branchCode, source:'', dr:drVal, cr:crVal, note:''});
+      if(branchCode && !current.branch) current.branch = branchCode;
+    }
+  }
+  if(current) entries.push(current);
+
+  return entries
+    .filter(e=> e.lines.length>=2)
+    .map(e=> ({...e, totalDr: e.lines.reduce((s,l)=>s+l.dr,0), totalCr: e.lines.reduce((s,l)=>s+l.cr,0)}));
+}
+
+// ─── خطوة الاختيار: إضافة على القديم أم استبدال كامل ───
+function restoreJrnRenderStep2(){
+  const entries = restoreJrnState.entries;
+  const totalDr = entries.reduce((s,e)=>s+e.totalDr,0);
+  const totalCr = entries.reduce((s,e)=>s+e.totalCr,0);
+
+  document.getElementById('restore-jrn-body').innerHTML = `
+    <div style="background:#eafaf1;border:1.5px solid #8fd9b6;border-radius:10px;padding:14px 16px;text-align:center;margin-bottom:18px">
+      <div style="font-size:26px;font-weight:800;color:#0a5c3f">${entries.length}</div>
+      <div style="font-size:12px;color:#0a5c3f">قيد تم العثور عليه في الملف — جاهز للاسترداد</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">إجمالي المدين: <b>${fmtNum(totalDr)}</b> — إجمالي الدائن: <b>${fmtNum(totalCr)}</b></div>
+    </div>
+    <div style="font-weight:700;margin-bottom:10px;color:var(--ink2)">هتضيف القيود دي إزاي؟</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-jrn" style="text-align:right;padding:14px 16px;white-space:normal;line-height:1.6" onclick="restoreJrnDoMerge()">
+        ➕ إضافة على القيود الحالية<br>
+        <span style="font-weight:400;font-size:11px;opacity:.9">هيتم فحص كل قيد، ولو موجود قيد مطابق له بالفعل في النظام (نفس التاريخ والبيان والمبالغ والحسابات) هيترفض تلقائيًا</span>
+      </button>
+      <button class="btn" style="text-align:right;padding:14px 16px;white-space:normal;line-height:1.6;color:#b52a2a;border-color:#f0a0a0" onclick="restoreJrnDoReplace()">
+        ♻️ استبدال كل القيود القديمة<br>
+        <span style="font-weight:400;font-size:11px;opacity:.9">هيتم حذف كل القيود الموجودة حاليًا في النظام نهائيًا، ويحل محلها قيود الملف فقط</span>
+      </button>
+    </div>
+  `;
+  document.getElementById('restore-jrn-footer').innerHTML = `
+    <button class="btn" onclick="closeRestoreJrnModal()">إلغاء</button>
+    <button class="btn" onclick="restoreJrnRenderStep1()">⬅ رجوع لاختيار ملف آخر</button>
+  `;
+}
+
+// ─── بصمة قيد (للمقارنة واكتشاف التكرار) — بتتجاهل الرقم والـ id وتعتمد على المحتوى الفعلي ───
+function _jrnSignature(entry){
+  const linesSig = (entry.lines||[])
+    .map(l=> [Number(l.accId)||0, Number(l.subAccId)||0, (+l.dr||0).toFixed(2), (+l.cr||0).toFixed(2)].join(':'))
+    .sort()
+    .join('|');
+  return [entry.date||'', String(entry.desc||'').trim(), linesSig].join('~');
+}
+
+function restoreJrnDoMerge(){
+  const entries = restoreJrnState.entries;
+  const existingSigs = new Set(journals.map(j=> _jrnSignature(j)));
+  let added=0, skipped=0;
+
+  entries.forEach(e=>{
+    const sig = _jrnSignature(e);
+    if(existingSigs.has(sig)){ skipped++; return; }
+    existingSigs.add(sig);
+
+    const jId = nextJrnId++;
+    const lines = e.lines.map(l=>({
+      id: lineIdCounter++, accId:l.accId||'', subAccId:l.subAccId||'',
+      branch:l.branch||e.branch||'', source:l.source||'', dr:+l.dr||0, cr:+l.cr||0, note:l.note||''
+    }));
+    const totalDr = lines.reduce((s,l)=>s+l.dr,0);
+    const totalCr = lines.reduce((s,l)=>s+l.cr,0);
+    journals.push({
+      id:jId, num:'JRN-'+String(jId).padStart(4,'0'), date:e.date, branch:e.branch||'',
+      type:e.type||'قيد عادي', desc:e.desc||'', notes:e.notes||'', posted:false,
+      lines, attachments:[], dr:totalDr, cr:totalCr,
+      createdBy:'admin', createdAt:new Date().toISOString().split('T')[0],
+      auditTrail:[], lastEditBy:'', lastEditAt:''
+    });
+    added++;
+  });
+
+  closeRestoreJrnModal();
+  renderJournals();
+  saveToStorage();
+  _pushUndo('استرداد '+added+' قيد (إضافة على القيود الحالية)');
+  alert('✅ تم استرداد '+added+' قيد بنجاح.'+(skipped?'\n⚠️ تم تجاهل '+skipped+' قيد لوجود قيد مطابق له بالفعل في النظام.':''));
+}
+
+function restoreJrnDoReplace(){
+  const entries = restoreJrnState.entries;
+  if(!confirm('⚠️ تحذير خطير جدًا!\nسيتم حذف كل القيود الحالية ('+journals.length+' قيد) نهائيًا، وسيتم استبدالها بالكامل بـ '+entries.length+' قيد من الملف المستورد.\n\nهل أنت متأكد من المتابعة؟')) return;
+
+  _downloadSafetyBackupBeforeRestore();
+  alert('📥 تم تنزيل نسخة احتياطية من بياناتك الحالية أولاً (قبل الاستبدال) في مجلد التنزيلات — احتفظ بيها لو احتجتها.');
+
+  journals.length = 0;
+  entries.forEach(e=>{
+    const jId = nextJrnId++;
+    const lines = e.lines.map(l=>({
+      id: lineIdCounter++, accId:l.accId||'', subAccId:l.subAccId||'',
+      branch:l.branch||e.branch||'', source:l.source||'', dr:+l.dr||0, cr:+l.cr||0, note:l.note||''
+    }));
+    const totalDr = lines.reduce((s,l)=>s+l.dr,0);
+    const totalCr = lines.reduce((s,l)=>s+l.cr,0);
+    journals.push({
+      id:jId, num:'JRN-'+String(jId).padStart(4,'0'), date:e.date, branch:e.branch||'',
+      type:e.type||'قيد عادي', desc:e.desc||'', notes:e.notes||'', posted:false,
+      lines, attachments:[], dr:totalDr, cr:totalCr,
+      createdBy:'admin', createdAt:new Date().toISOString().split('T')[0],
+      auditTrail:[], lastEditBy:'', lastEditAt:''
+    });
+  });
+  nextJrnId = Math.max(0, ...journals.map(j=>j.id||0)) + 1;
+
+  closeRestoreJrnModal();
+  renderJournals();
+  saveToStorage();
+  _pushUndo('استبدال كل القيود باسترداد '+entries.length+' قيد');
+  alert('✅ تم استبدال كل القيود القديمة، والآن يوجد '+entries.length+' قيد في النظام.');
 }
 
 
