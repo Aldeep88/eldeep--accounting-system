@@ -3375,6 +3375,24 @@ function importJSON(){
           if(data.nextAccId) nextAccId=data.nextAccId;
           if(data.nextJrnId) nextJrnId=data.nextJrnId;
           renderAccounts(); saveToStorage(); alert('✅ تم استيراد البيانات بنجاح');
+        } else if(!data.type && Array.isArray(data.journals) && Array.isArray(data.accounts) && Array.isArray(data.costs)){
+          // صيغة تصدير "نسخة احتياطية" من صفحة القيود (بدون حقل type) — نعاملها كاستعادة كاملة
+          const dateInfo = data.exportDate ? ('\nتاريخ التصدير: '+new Date(data.exportDate).toLocaleString('ar-EG')) : '';
+          if(!confirm('هذا ملف نسخة احتياطية كاملة (حسابات + قيود + مراكز تكلفة).'+dateInfo+'\nسيتم استبدال كل البيانات الحالية بمحتوى هذا الملف ('+data.journals.length+' قيد). متأكد؟'))return;
+          _pushUndo('استعادة نسخة احتياطية من ملف ('+data.journals.length+' قيد)');
+          accounts.length=0; data.accounts.forEach(a=>accounts.push(a));
+          costs.length=0;    data.costs.forEach(c=>costs.push(c));
+          journals.length=0; data.journals.forEach(j=>{
+            if(j.lines) j.lines.forEach(l=>{
+              if(l.accId)    l.accId    = Number(l.accId);
+              if(l.subAccId) l.subAccId = Number(l.subAccId);
+            });
+            journals.push(j);
+          });
+          nextAccId = Math.max(0, ...accounts.map(a=>a.id||0)) + 1;
+          nextJrnId = Math.max(0, ...journals.map(j=>j.id||0)) + 1;
+          renderAccounts(); renderCosts(); renderJournals(); saveToStorage();
+          alert('✅ تم استرجاع '+data.journals.length+' قيد بنجاح من النسخة الاحتياطية');
         } else if(data.type==='accounts'){
           if(!confirm('سيتم استبدال شجرة الحسابات. متأكد؟'))return;
           accounts.length=0; data.data.forEach(a=>accounts.push(a));
