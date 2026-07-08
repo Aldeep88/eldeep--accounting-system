@@ -9,6 +9,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -44,10 +45,10 @@
   --jrn-mid: #b09af8;
   --jrn-dark: #4a1aaa;
 
-  --rpt-hue: #c8193a;       /* التقارير — Crimson Rose */
-  --rpt-soft: #fff0f3;
-  --rpt-mid: #f9a0b2;
-  --rpt-dark: #960d2b;
+  --rpt-hue: #2563eb;       /* التقارير — Deep Blue */
+  --rpt-soft: #eff6ff;
+  --rpt-mid: #93c5fd;
+  --rpt-dark: #1e40af;
 
   --tb-hue: #0a7c55;        /* ميزان المراجعة — Jewel Emerald */
   --tb-soft: #edfaf4;
@@ -86,7 +87,14 @@ body{font-family:var(--font);background:linear-gradient(135deg,#edf0fa 0%,#f4f0f
   display:flex;flex-direction:column;
   overflow:hidden;position:relative;
   transition:width 0.3s cubic-bezier(.4,0,.2,1);
+  max-height:100vh;
 }
+.sidebar-scroll{
+  flex:1 1 auto;overflow-y:auto;min-height:0;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar{width:5px}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:10px}
 
 .sidebar-logo{
   padding:22px 20px 18px;
@@ -128,7 +136,7 @@ body{font-family:var(--font);background:linear-gradient(135deg,#edf0fa 0%,#f4f0f
 .nav-item.active.jrn-active .nav-badge{background:rgba(109,40,217,0.38);color:#b09af8}
 .nav-item.active.rpt-active .nav-badge{background:rgba(200,25,58,0.35);color:#f9a0b2}
 
-.sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,0.07)}
+.sidebar-bottom{flex-shrink:0;padding:16px;border-top:1px solid rgba(255,255,255,0.07)}
 .sidebar-time{font-size:11px;color:rgba(255,255,255,0.25);text-align:center}
 .sync-indicator{
   display:flex;align-items:center;gap:8px;
@@ -914,6 +922,44 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
   #print-overlay{display:block!important}
   #print-overlay-body{padding:15px}
 }
+
+/* ======================================================= */
+/* ORIENTATION PICKER DIALOG — اختيار اتجاه الطباعة      */
+/* ======================================================= */
+#orientation-backdrop{
+  display:none;position:fixed;inset:0;z-index:999998;
+  background:rgba(13,27,42,0.55);backdrop-filter:blur(4px);
+}
+#orientation-backdrop.active{display:flex;align-items:center;justify-content:center}
+#orientation-dialog{
+  background:#fff;border-radius:20px;padding:32px 36px;
+  box-shadow:0 24px 80px rgba(13,27,42,0.30);
+  font-family:'Cairo',sans-serif;direction:rtl;
+  text-align:center;min-width:320px;max-width:400px;
+  animation:orient-pop .22s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes orient-pop{from{transform:scale(0.82);opacity:0}to{transform:scale(1);opacity:1}}
+#orientation-dialog h3{
+  font-size:18px;font-weight:800;color:#0d1b2a;margin-bottom:6px
+}
+#orientation-dialog p{font-size:13px;color:#5a7a9a;margin-bottom:24px}
+.orient-btns{display:flex;gap:14px;justify-content:center}
+.orient-btn{
+  flex:1;padding:18px 10px;border-radius:14px;border:2.5px solid #dde5f2;
+  background:#f8faff;cursor:pointer;font-family:'Cairo',sans-serif;
+  transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.orient-btn:hover{border-color:#6d28d9;background:#f4f0ff;transform:translateY(-2px);box-shadow:0 8px 24px rgba(109,40,217,0.15)}
+.orient-btn.selected{border-color:#6d28d9;background:#f4f0ff}
+.orient-icon{font-size:36px;line-height:1}
+.orient-label{font-size:13px;font-weight:700;color:#0d1b2a}
+.orient-sub{font-size:11px;color:#5a7a9a;font-weight:400}
+#orientation-cancel{
+  margin-top:18px;background:none;border:none;font-family:'Cairo',sans-serif;
+  font-size:12px;color:#90aec8;cursor:pointer;text-decoration:underline;
+}
+#orientation-cancel:hover{color:#0d1b2a}
+@media print{#orientation-backdrop{display:none!important}}
 </style>
 </head>
 <body>
@@ -923,6 +969,27 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
   <button id="print-overlay-close" onclick="closePrintOverlay()">✕ إغلاق</button>
   <button id="print-overlay-print" onclick="window.print()">🖨️ طباعة</button>
   <div id="print-overlay-body"></div>
+</div>
+
+<!-- ORIENTATION PICKER DIALOG -->
+<div id="orientation-backdrop">
+  <div id="orientation-dialog">
+    <h3>🖨️ اتجاه الطباعة</h3>
+    <p>اختر اتجاه الصفحة قبل الطباعة أو حفظ PDF</p>
+    <div class="orient-btns">
+      <button class="orient-btn" id="orient-portrait-btn" onclick="confirmOrientation('portrait')">
+        <span class="orient-icon">📄</span>
+        <span class="orient-label">طولي</span>
+        <span class="orient-sub">Portrait — A4 عمودي</span>
+      </button>
+      <button class="orient-btn" id="orient-landscape-btn" onclick="confirmOrientation('landscape')">
+        <span class="orient-icon">🗒️</span>
+        <span class="orient-label">عرضي</span>
+        <span class="orient-sub">Landscape — A4 أفقي</span>
+      </button>
+    </div>
+    <button id="orientation-cancel" onclick="cancelOrientation()">إلغاء</button>
+  </div>
 </div>
 <div class="app">
 <div class="layout">
@@ -934,6 +1001,7 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
     <div class="logo-title" id="sidebar-company-name">Eldeep System</div>
     <div class="logo-sub" id="sidebar-company-sub">Accounting System v1.0</div>
   </div>
+  <div class="sidebar-scroll">
   <div class="sidebar-section">القوائم الرئيسية</div>
   <div class="nav-item active jrn-active" onclick="showPage('journals')" id="tab-journals">
     <span class="nav-icon">📒</span>
@@ -960,8 +1028,12 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
     <span class="nav-label">مراكز التكلفة</span>
     <span class="nav-badge" id="nb-costs">—</span>
   </div>
+  </div>
   <div class="sidebar-bottom">
     <div style="padding:0 12px 10px;display:flex;flex-direction:column;gap:6px">
+      <button id="undo-btn" onclick="undoLast()" style="width:100%;padding:8px;background:rgba(109,40,217,0.20);color:#b09af8;border:1px solid rgba(109,40,217,0.35);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;opacity:0.4" title="لا يوجد إجراء للتراجع">
+        ↩️ تراجع عن آخر إجراء
+      </button>
       <button onclick="exportJSON_full()" style="width:100%;padding:8px;background:rgba(52,66,86,0.85);color:#a8c0d6;border:1px solid rgba(168,192,214,0.2);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="حفظ كل بيانات البرنامج">
         💾 حفظ كامل للبرنامج
       </button>
@@ -1064,6 +1136,8 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
         <button class="btn btn-sm" onclick="exportJrnExcel()" style="color:var(--green);border-color:var(--cost-mid)">📊 Excel</button>
         <button class="btn btn-sm" onclick="exportJrnPdf()" style="color:var(--red);border-color:#f0a0a0">📄 PDF</button>
         <button class="btn btn-sm" onclick="exportJrnJson()" style="color:var(--jrn-hue);border-color:var(--jrn-mid)">💾 نسخة احتياطية</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteSelectedJrns()">🗑️ حذف المحدد</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAllJrns()">🗑️ حذف الكل</button>
       </div>
     </div>
     <div class="jrn-body" id="jrn-body"></div>
@@ -1164,15 +1238,15 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
       <div id="rpt-kpi-bar" style="display:none" class="rpt-kpi-row">
         <div class="rpt-kpi kpi-dr">
           <div class="rpt-kpi-icon">📥</div>
-          <div><div class="rpt-kpi-val" id="rpt-kv-dr">0.00</div><div class="rpt-kpi-lbl">إجمالي المدين</div></div>
+          <div><div class="rpt-kpi-val" id="rpt-kv-dr">0</div><span style="font-size:0.7em;color:var(--ink4);align-self:flex-start;margin-top:4px">ج.م</span><div class="rpt-kpi-lbl">إجمالي المدين</div></div>
         </div>
         <div class="rpt-kpi kpi-cr">
           <div class="rpt-kpi-icon">📤</div>
-          <div><div class="rpt-kpi-val" id="rpt-kv-cr">0.00</div><div class="rpt-kpi-lbl">إجمالي الدائن</div></div>
+          <div><div class="rpt-kpi-val" id="rpt-kv-cr">0</div><span style="font-size:0.7em;color:var(--ink4);align-self:flex-start;margin-top:4px">ج.م</span><div class="rpt-kpi-lbl">إجمالي الدائن</div></div>
         </div>
         <div class="rpt-kpi kpi-zero" id="rpt-kv-net-card">
           <div class="rpt-kpi-icon">⚖️</div>
-          <div><div class="rpt-kpi-val" id="rpt-kv-net">0.00</div><div class="rpt-kpi-lbl">صافي الرصيد</div></div>
+          <div><div class="rpt-kpi-val" id="rpt-kv-net">0</div><span style="font-size:0.7em;color:var(--ink4);align-self:flex-start;margin-top:4px">ج.م</span><div class="rpt-kpi-lbl">صافي الرصيد</div></div>
         </div>
       </div>
 
@@ -1695,6 +1769,21 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
 </div>
 </div>
 
+<!-- ═══════════ استيراد قيود من إكسيل ═══════════ -->
+<div class="overlay hidden" id="xlsx-import-overlay" onclick="if(event.target===this)closeXlsxImportModal()">
+<div class="modal" style="max-width:900px">
+  <div class="modal-header">
+    <div class="modal-header-accent" style="background:#0a7c55"></div>
+    <h2>📥 استيراد قيود من إكسيل</h2>
+    <button class="btn-icon" onclick="closeXlsxImportModal()">✕</button>
+  </div>
+  <div class="modal-body" id="xlsx-import-body" style="max-height:78vh;overflow-y:auto">
+    <!-- يتغيّر محتواه حسب الخطوة عن طريق JS -->
+  </div>
+  <div class="modal-footer" id="xlsx-import-footer"></div>
+</div>
+</div>
+
 </div><!-- /app -->
 
 <script>
@@ -1748,8 +1837,13 @@ let accounts = [
   {id:35,code:"8200",name:"مصروفات تسويقية",          level:"sub", nature:"مدين",list:"قائمة دخل",cat:"مصروفات",      parent:33},
   {id:36,code:"8300",name:"مصروفات مالية وفوائد",     level:"sub", nature:"مدين",list:"قائمة دخل",cat:"مصروفات",      parent:33},
   {id:37,code:"8400",name:"مصروفات استهلاك",          level:"sub", nature:"مدين",list:"قائمة دخل",cat:"مصروفات",      parent:33},
+  // حسابات المدينة (توزيع فواتير الصيادلة) — أُضيفت تلقائياً
+  {id:39, code:"10000",name:"المدينه",              level:"main",nature:"مدين",list:"ميزانية",   cat:"الأصول",       parent:null},
+  {id:40, code:"10200",name:"مخزن الصيادله",         level:"sub", nature:"مدين",list:"ميزانية",   cat:"الأصول",       parent:39},
+  {id:41, code:"11000",name:"موردين المدينه",        level:"main",nature:"دائن",list:"ميزانية",   cat:"الالتزامات",   parent:null},
+  {id:42, code:"11200",name:"الصيادله المدينه",      level:"sub", nature:"دائن",list:"ميزانية",   cat:"الالتزامات",   parent:41},
 ];
-let nextAccId = 39;
+let nextAccId = 43;
 let collapsed = {};
 let editingAccId = null;
 let addingSubTo = null;
@@ -1774,10 +1868,159 @@ let journals = [
      {id:1005,accId:1,subAccId:2,branch:"C003",source:"عميل",dr:85000,cr:0,note:"نقدي"},
      {id:1006,accId:23,subAccId:24,branch:"C003",source:"عميل",dr:0,cr:85000,note:""}
    ],attachments:[],dr:85000,cr:85000,createdBy:"admin",createdAt:"2025-01-10",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  // قيود توزيع فواتير الصيادلة - المدينة (يونيو 2026) — أُضيفت تلقائياً من شيت الإكسيل
+  {id:4,num:"JRN-0004",date:"2026-06-08",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2001,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:9728.43,cr:0,note:""},
+     {id:2002,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2532.55},
+     {id:2003,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2460.54},
+     {id:2004,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2562.86},
+     {id:2005,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1980.48},
+     {id:2006,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:192}
+   ],attachments:[],dr:9728.43,cr:9728.43,createdBy:"admin",createdAt:"2026-06-08",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:5,num:"JRN-0005",date:"2026-06-08",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2007,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:13788.75,cr:0,note:""},
+     {id:2008,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1995.67},
+     {id:2009,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2196.1},
+     {id:2010,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1925.61},
+     {id:2011,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1308.38},
+     {id:2012,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1514.3},
+     {id:2013,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1884.16},
+     {id:2014,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2684.51},
+     {id:2015,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:280.02}
+   ],attachments:[],dr:13788.75,cr:13788.75,createdBy:"admin",createdAt:"2026-06-08",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:6,num:"JRN-0006",date:"2026-06-11",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2016,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:27554.55,cr:0,note:""},
+     {id:2017,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2433.04},
+     {id:2018,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2217.37},
+     {id:2019,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1687.37},
+     {id:2020,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1674.71},
+     {id:2021,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1981.79},
+     {id:2022,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1552.44},
+     {id:2023,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1513.58},
+     {id:2024,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1337.9},
+     {id:2025,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:810.61},
+     {id:2026,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2237.34},
+     {id:2027,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1974.05},
+     {id:2028,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2441.09},
+     {id:2029,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1167.33},
+     {id:2030,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2285.44},
+     {id:2031,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1322.61},
+     {id:2032,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:917.88}
+   ],attachments:[],dr:27554.55,cr:27554.55,createdBy:"admin",createdAt:"2026-06-11",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:7,num:"JRN-0007",date:"2026-06-13",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2033,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:17256.58,cr:0,note:""},
+     {id:2034,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1160.13},
+     {id:2035,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1757.49},
+     {id:2036,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:802.06},
+     {id:2037,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2451.38},
+     {id:2038,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2284.58},
+     {id:2039,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1951.44},
+     {id:2040,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1633.53},
+     {id:2041,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2992.26},
+     {id:2042,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1972.55},
+     {id:2043,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:251.16}
+   ],attachments:[],dr:17256.58,cr:17256.58,createdBy:"admin",createdAt:"2026-06-13",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:8,num:"JRN-0008",date:"2026-06-14",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2044,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:25247.83,cr:0,note:""},
+     {id:2045,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1292.1},
+     {id:2046,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:227.61},
+     {id:2047,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2555.08},
+     {id:2048,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1860.21},
+     {id:2049,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1616},
+     {id:2050,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1690.85},
+     {id:2051,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2790.57},
+     {id:2052,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1119.8},
+     {id:2053,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:4659.61},
+     {id:2054,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2345.6},
+     {id:2055,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2578.93},
+     {id:2056,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1988.27},
+     {id:2057,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:523.2}
+   ],attachments:[],dr:25247.83,cr:25247.83,createdBy:"admin",createdAt:"2026-06-14",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:9,num:"JRN-0009",date:"2026-06-15",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2058,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:17096.66,cr:0,note:""},
+     {id:2059,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1803.96},
+     {id:2060,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:3029.74},
+     {id:2061,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1359.66},
+     {id:2062,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2105.92},
+     {id:2063,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2957.65},
+     {id:2064,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2123.31},
+     {id:2065,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2038.22},
+     {id:2066,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1678.2}
+   ],attachments:[],dr:17096.66,cr:17096.66,createdBy:"admin",createdAt:"2026-06-15",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:10,num:"JRN-0010",date:"2026-06-16",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2067,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:12759.53,cr:0,note:""},
+     {id:2068,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1310.4},
+     {id:2069,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2049.48},
+     {id:2070,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2480.88},
+     {id:2071,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2207.01},
+     {id:2072,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2646.04},
+     {id:2073,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:808.33},
+     {id:2074,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1257.39}
+   ],attachments:[],dr:12759.53,cr:12759.53,createdBy:"admin",createdAt:"2026-06-16",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:11,num:"JRN-0011",date:"2026-06-17",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2075,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:6642,cr:0,note:""},
+     {id:2076,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1861},
+     {id:2077,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2164},
+     {id:2078,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2226},
+     {id:2079,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:391}
+   ],attachments:[],dr:6642,cr:6642,createdBy:"admin",createdAt:"2026-06-17",auditTrail:[],lastEditBy:"",lastEditAt:""},
+  {id:12,num:"JRN-0012",date:"2026-06-18",branch:"C006",type:"قيد عادي",desc:"فاتورة",notes:"",posted:false,
+   lines:[
+     {id:2080,accId:39,subAccId:40,branch:"C006",source:"6-2026",dr:24970,cr:0,note:""},
+     {id:2081,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2104},
+     {id:2082,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1323},
+     {id:2083,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1445},
+     {id:2084,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1345},
+     {id:2085,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1798},
+     {id:2086,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1359},
+     {id:2087,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2147},
+     {id:2088,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:344},
+     {id:2089,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:848},
+     {id:2090,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:715},
+     {id:2091,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1513},
+     {id:2092,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1591},
+     {id:2093,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1276},
+     {id:2094,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1600},
+     {id:2095,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:352},
+     {id:2096,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1293},
+     {id:2097,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:2897},
+     {id:2098,accId:41,subAccId:42,branch:"C006",source:"6-2026",dr:0,cr:1020}
+   ],attachments:[],dr:24970,cr:24970,createdBy:"admin",createdAt:"2026-06-18",auditTrail:[],lastEditBy:"",lastEditAt:""}
 ];
-let nextJrnId = 4;
+// نسخة أصلية من القيود المبدئية المكتوبة في الكود — تُستخدم لضمان ظهور
+// أي قيد جديد يتم إضافته للكود حتى لو فيه بيانات قديمة محفوظة على
+// الجهاز (localStorage) أو على السحابة (Firebase) بتاخد الأولوية عادةً.
+const DEFAULT_JOURNALS = JSON.parse(JSON.stringify(journals));
+
+// بيضيف أي قيد موجود في DEFAULT_JOURNALS ومش موجود في المصفوفة الحالية
+// (بيقارن برقم القيد "num")، وبيرجع true لو ضاف حاجة جديدة.
+function mergeMissingDefaultJournals(){
+  let changed = false;
+  DEFAULT_JOURNALS.forEach(dj=>{
+    const exists = journals.some(j=>j.num===dj.num);
+    if(!exists){
+      journals.push(JSON.parse(JSON.stringify(dj)));
+      changed = true;
+    }
+  });
+  if(changed){
+    journals.sort((a,b)=>a.id-b.id);
+    const maxId = journals.reduce((m,j)=>Math.max(m,j.id),0);
+    if(nextJrnId <= maxId) nextJrnId = maxId+1;
+  }
+  return changed;
+}
+let nextJrnId = 13;
 let editingJrnId = null;
-let lineIdCounter = 2000;
+let lineIdCounter = 2099;
 let openJrnCards = {};
 
 let costs = [
@@ -1786,26 +2029,67 @@ let costs = [
   {id:3, code:"C003", name:"قسم المبيعات",    type:"قسم"},
   {id:4, code:"C004", name:"قسم الإدارة",     type:"قسم"},
   {id:5, code:"C005", name:"مشروع التوسعة",   type:"مشروع"},
+  {id:6, code:"C006", name:"المدينه",         type:"فرع"},
 ];
-let nextCostId = 6;
+let nextCostId = 7;
 let editingCostId = null;
 
 // ============================================================
 // PRINT OVERLAY — طباعة داخلية بدون نافذة جديدة
 // ============================================================
-function showPrintOverlay(htmlContent){
-  // فتح التقرير في tab جديد عبر Blob URL لضمان عرض CSS والفونتات صح
-  var blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href   = url;
-  a.target = '_blank';
-  a.rel    = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+/* ── Orientation Picker ── */
+var _pendingPrintHtml = null;
+var _pendingPrintCallback = null;
+
+function showOrientationPicker(callback){
+  _pendingPrintCallback = callback;
+  document.getElementById('orientation-backdrop').classList.add('active');
 }
+
+function confirmOrientation(orient){
+  document.getElementById('orientation-backdrop').classList.remove('active');
+  if(_pendingPrintCallback) _pendingPrintCallback(orient);
+  _pendingPrintCallback = null;
+}
+
+function cancelOrientation(){
+  document.getElementById('orientation-backdrop').classList.remove('active');
+  _pendingPrintCallback = null;
+}
+
+/* إضافة @page CSS حسب الاتجاه المختار داخل HTML التقرير */
+function injectOrientationCss(htmlContent, orient){
+  var pageRule = '@page{size:A4 '+ orient +';margin:10mm}';
+  /* لو في @page موجودة بالفعل، نستبدلها */
+  if(htmlContent.indexOf('@page{') !== -1){
+    htmlContent = htmlContent.replace(/@page\{[^}]*\}/g, pageRule);
+  } else {
+    /* نحقنها قبل </style> أو بعد آخر </head> */
+    if(htmlContent.indexOf('</style>') !== -1){
+      htmlContent = htmlContent.replace('</style>', pageRule + '</style>');
+    } else {
+      htmlContent = htmlContent.replace('<body', '<style>'+pageRule+'</style><body');
+    }
+  }
+  return htmlContent;
+}
+
+function showPrintOverlay(htmlContent){
+  showOrientationPicker(function(orient){
+    var finalHtml = injectOrientationCss(htmlContent, orient);
+    var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.target = '_blank';
+    a.rel    = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+  });
+}
+
 function closePrintOverlay(){
   // الـ overlay لم يعد يُستخدم — محتفظ بها للتوافق
   document.getElementById('print-overlay').classList.remove('active');
@@ -1944,6 +2228,19 @@ function _loadFromLocal(){
 // هل أول اتصال اتعمل؟
 let _fbFirstLoad = true;
 
+// ── حماية: لو البيانات الجايه فيها قيود أقل بشكل ملحوظ من الموجود محليًا، اوقف واسأل بدل ما تمسح تلقائي ──
+function _fbSafeToApply(incomingData, currentLocalRaw){
+  try{
+    if(!currentLocalRaw) return true;
+    const local = JSON.parse(currentLocalRaw);
+    const localCount    = (local.journals||[]).length;
+    const incomingCount = (incomingData.journals||[]).length;
+    // لو العدد الجديد أقل بـ 5 قيود أو أكتر من المحلي — ده مؤشر خطر، منسمحش بالاستبدال التلقائي
+    if(localCount - incomingCount >= 5) return false;
+    return true;
+  }catch(e){ return true; }
+}
+
 function _loadFromFirebase(){
   try{
     const db = fbGetDb();
@@ -1983,6 +2280,21 @@ function _loadFromFirebase(){
           : 0;
 
         if(fbTime >= localTime){
+          if(!_fbSafeToApply(data, localRaw)){
+            // فرق كبير في عدد القيود — لا تستبدل تلقائيًا، اسأل المستخدم
+            const lc = localRaw ? (JSON.parse(localRaw).journals||[]).length : 0;
+            const fc = (data.journals||[]).length;
+            fbShowSyncBadge('⚠️ تعارض بيانات — راجع الإعدادات','#c8193a');
+            if(confirm('⚠️ تنبيه هام!\nنسخة السحابة فيها '+fc+' قيد، بينما جهازك فيه '+lc+' قيد (فرق كبير).\nتحميل نسخة السحابة هيستبدل بيانات جهازك.\n\nهل تريد تحميل نسخة السحابة رغم ذلك؟\n(اضغط إلغاء للاحتفاظ ببياناتك المحلية والاتصال بالدعم الفني أولاً)')){
+              _applyData(data);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              applySysName(); renderAccounts(); renderCosts(); renderJournals();
+              fbShowSyncBadge('✅ تم التحميل من السحابة','#0a7c55');
+            } else {
+              fbShowSyncBadge('⏸️ تم الاحتفاظ ببياناتك المحلية','#b86000');
+            }
+            return;
+          }
           // السحابة أحدث أو متساوية — حمّل من السحابة
           _applyData(data);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -1997,6 +2309,21 @@ function _loadFromFirebase(){
       } else {
         // ── تحديث تلقائي: جاء تغيير من جهاز تاني — طبّقه لو مش بنحفظ دلوقتي ──
         if(!_fbIsSaving){
+          const curRaw = localStorage.getItem(STORAGE_KEY);
+          if(!_fbSafeToApply(data, curRaw)){
+            const lc = curRaw ? (JSON.parse(curRaw).journals||[]).length : 0;
+            const fc = (data.journals||[]).length;
+            fbShowSyncBadge('⚠️ تعارض بيانات — راجع الإعدادات','#c8193a');
+            if(confirm('⚠️ تنبيه هام!\nوصل تحديث من جهاز آخر فيه '+fc+' قيد، بينما جهازك فيه '+lc+' قيد (فرق كبير).\nتطبيق التحديث هيستبدل بيانات جهازك.\n\nهل تريد تطبيق التحديث رغم ذلك؟')){
+              _applyData(data);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              applySysName(); renderAccounts(); renderCosts(); renderJournals();
+              fbShowSyncBadge('🔄 تحديث من جهاز آخر — '+new Date().toLocaleTimeString('ar-EG'),'#1a56db');
+            } else {
+              fbShowSyncBadge('⏸️ تم رفض التحديث الوارد','#b86000');
+            }
+            return;
+          }
           _applyData(data);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
           applySysName(); renderAccounts(); renderCosts(); renderJournals();
@@ -2028,6 +2355,12 @@ function _applyData(data){
   if(data.openingBalances) Object.assign(openingBalances, data.openingBalances);
   if(data.companyName && data.companyName !== 'Deep System') companyName=data.companyName;
   if(data.companySub) companySub=data.companySub;
+
+  // تأكيد ظهور أي قيود جديدة تمت إضافتها للكود حتى لو البيانات
+  // المحمّلة (محلية أو من السحابة) قديمة ومش فيها القيود دي
+  if(mergeMissingDefaultJournals()){
+    setTimeout(()=>{ try{ saveToStorage(); }catch(e){} }, 50);
+  }
 }
 
 // ============================================================
@@ -2393,6 +2726,71 @@ function showToast(msg, type='acc'){
   setTimeout(()=>{bar.style.opacity='0';setTimeout(()=>bar.remove(),600);},3500);
 }
 
+// ============================================================
+// UNDO SYSTEM — التراجع عن آخر إجراء (حذف/مسح)
+// ============================================================
+const _undoStack = [];
+const _UNDO_MAX = 15;
+
+function _pushUndo(label){
+  try{
+    _undoStack.push({
+      label,
+      time: Date.now(),
+      accounts: JSON.parse(JSON.stringify(accounts)),
+      journals: JSON.parse(JSON.stringify(journals)),
+      costs: JSON.parse(JSON.stringify(costs)),
+      openingBalances: JSON.parse(JSON.stringify(openingBalances))
+    });
+    if(_undoStack.length > _UNDO_MAX) _undoStack.shift();
+    _updateUndoBtn();
+  }catch(e){ console.warn('undo push error', e); }
+}
+
+function undoLast(){
+  if(!_undoStack.length){ showToast('⚠️ لا يوجد إجراء للتراجع عنه', 'rpt'); return; }
+  const snap = _undoStack.pop();
+  accounts.length=0; snap.accounts.forEach(a=>accounts.push(a));
+  journals.length=0; snap.journals.forEach(j=>journals.push(j));
+  costs.length=0;    snap.costs.forEach(c=>costs.push(c));
+  Object.keys(openingBalances).forEach(k=>delete openingBalances[k]);
+  Object.assign(openingBalances, snap.openingBalances);
+  renderAccounts(); renderCosts(); renderJournals();
+  saveToStorage();
+  _updateUndoBtn();
+  showToast('↩️ تم التراجع عن: '+snap.label, 'jrn');
+}
+
+function _updateUndoBtn(){
+  const btn = document.getElementById('undo-btn');
+  if(!btn) return;
+  btn.style.opacity = _undoStack.length ? '1' : '0.4';
+  btn.title = _undoStack.length ? ('تراجع عن: '+_undoStack[_undoStack.length-1].label) : 'لا يوجد إجراء للتراجع';
+}
+
+// توست تراجع سريع يظهر فورًا بعد إجراء حذف — بيدي فرصة تراجع لحظية
+function showUndoToast(msg){
+  const bar=document.createElement('div');
+  Object.assign(bar.style,{
+    position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',
+    background:'#1f2937',color:'#fff',
+    padding:'10px 14px 10px 20px',borderRadius:'30px',
+    fontFamily:'Cairo,sans-serif',fontSize:'13px',fontWeight:'700',
+    zIndex:'999999',boxShadow:'0 6px 24px rgba(0,0,0,0.3)',
+    display:'flex',alignItems:'center',gap:'10px',whiteSpace:'nowrap'
+  });
+  const txt=document.createElement('span'); txt.textContent=msg;
+  const btn=document.createElement('button'); btn.textContent='↩️ تراجع';
+  Object.assign(btn.style,{
+    background:'#6d28d9',color:'#fff',border:'none',borderRadius:'20px',
+    padding:'6px 14px',fontFamily:'Cairo,sans-serif',fontSize:'12.5px',fontWeight:'700',cursor:'pointer'
+  });
+  btn.onclick=()=>{ undoLast(); bar.remove(); };
+  bar.appendChild(txt); bar.appendChild(btn);
+  document.body.appendChild(bar);
+  setTimeout(()=>{ if(bar.parentNode){ bar.style.opacity='0'; bar.style.transition='opacity 0.4s'; setTimeout(()=>bar.remove(),400);} },6000);
+}
+
 function updateClock(){
   const now=new Date();
   const d=now.toLocaleDateString('ar-EG',{weekday:'short',day:'numeric',month:'short'});
@@ -2426,6 +2824,7 @@ const pageConfig = {
   journals:{icon:'📒',iconClass:'jrn',title:'القيود اليومية',sub:'تسجيل ومراجعة القيود المحاسبية',navClass:'jrn-active',btn:`
     <div class="export-group">
       <button class="btn btn-jrn" onclick="openJrnModal()">+ قيد جديد</button>
+      <button class="btn" onclick="openXlsxImportModal()" style="color:#0a7c55;border-color:#8fd9b6" title="استيراد قيود من ملف إكسيل">📥 استيراد إكسيل</button>
       <div class="export-sep"></div>
       <button class="btn btn-excel" onclick="exportExcel_journals()" title="تصدير Excel">📊 Excel</button>
       <button class="btn btn-json" onclick="exportJSON_journals()" title="حفظ بصيغة البرنامج">💾 حفظ</button>
@@ -2566,7 +2965,9 @@ function deleteCost(id){
   const used=journals.some(j=>j.branch===c.code||j.lines.some(l=>l.branch===c.code));
   if(used){alert(`لا يمكن حذف "${c.name}" لأنه مستخدم في قيود محاسبية`);return;}
   if(!confirm(`حذف مركز التكلفة "${c.name}"؟`))return;
+  _pushUndo('حذف مركز التكلفة '+c.name);
   costs=costs.filter(x=>x.id!==id); renderCosts(); saveToStorage();
+  showUndoToast('🗑️ تم حذف مركز التكلفة "'+c.name+'"');
 }
 
 // ============================================================
@@ -2814,7 +3215,7 @@ function exportExcel_reports(){
   const net=totDr-totCr;
   const ac=rptActiveCols||['date','num','desc','mainAcc','subAcc','cost','source','dr','cr'];
   const colHeaders={date:'التاريخ',num:'رقم القيد',desc:'البيان',mainAcc:'الحساب الرئيسي',subAcc:'الحساب الفرعي',cost:'مركز التكلفة',source:'المستلم',dr:'مدين',cr:'دائن'};
-  const thHtml=ac.map(id=>`<td style="background:#960d2b;color:#fff;padding:10px 14px;font-weight:800;font-size:12px;border:1px solid #c8193a">${colHeaders[id]}</td>`).join('');
+  const thHtml=ac.map(id=>`<td style="background:#1e40af;color:#fff;padding:10px 14px;font-weight:800;font-size:12px;border:1px solid #2563eb">${colHeaders[id]}</td>`).join('');
   const bodyRows=rptRows.map((r,i)=>{
     const cells=ac.map(id=>{
       if(id==='date') return `<td style="padding:8px 12px;border-bottom:1px solid #edf0f5">${rpt_fmtDate(r.date)}</td>`;
@@ -2831,18 +3232,18 @@ function exportExcel_reports(){
     return `<tr style="background:${i%2===0?'#fafbfc':'#fff'}">${cells}</tr>`;
   }).join('');
   const footCells=ac.map(id=>{
-    if(id==='dr') return `<td style="padding:10px 14px;text-align:left;color:#0f4a8a;font-weight:800;font-size:13px;border-top:2px solid #c8193a;background:#fff0f3">${rpt_fmt(totDr)}</td>`;
-    if(id==='cr') return `<td style="padding:10px 14px;text-align:left;color:#7a4004;font-weight:800;font-size:13px;border-top:2px solid #c8193a;background:#fff0f3">${rpt_fmt(totCr)}</td>`;
-    return `<td style="padding:10px 14px;border-top:2px solid #c8193a;background:#fff0f3"></td>`;
+    if(id==='dr') return `<td style="padding:10px 14px;text-align:left;color:#1e40af;font-weight:800;font-size:13px;border-top:2px solid #2563eb;background:#eff6ff">${rpt_fmt(totDr)}</td>`;
+    if(id==='cr') return `<td style="padding:10px 14px;text-align:left;color:#7a4004;font-weight:800;font-size:13px;border-top:2px solid #2563eb;background:#eff6ff">${rpt_fmt(totCr)}</td>`;
+    return `<td style="padding:10px 14px;border-top:2px solid #2563eb;background:#eff6ff"></td>`;
   });
-  footCells[0]=`<td colspan="${ac.filter(id=>id!=='dr'&&id!=='cr').length}" style="padding:10px 14px;font-weight:800;color:#960d2b;font-size:13px;border-top:2px solid #c8193a;background:#fff0f3">📊 الإجمالي الكلي</td>`;
+  footCells[0]=`<td colspan="${ac.filter(id=>id!=='dr'&&id!=='cr').length}" style="padding:10px 14px;font-weight:800;color:#1e40af;font-size:13px;border-top:2px solid #2563eb;background:#eff6ff">📊 الإجمالي الكلي</td>`;
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
   <head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>التقارير</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
   <style>body{font-family:Cairo,Arial,sans-serif;direction:rtl}table{border-collapse:collapse;width:100%}</style>
   </head><body>
   <table>
-    <tr><td colspan="${ac.length}" style="background:linear-gradient(135deg,#c8193a,#960d2b);color:#fff;padding:16px 20px;font-size:18px;font-weight:800;font-family:Cairo,Arial">📊 التقارير التفصيلية — ${getSysName()}</td></tr>
-    <tr><td colspan="${ac.length}" style="background:#fff0f3;padding:8px 16px;color:#960d2b;font-size:12px;font-weight:600">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')} | السجلات: ${rptRows.length} | المدين: ${rpt_fmt(totDr)} | الدائن: ${rpt_fmt(totCr)} | الصافي: ${rpt_fmt(Math.abs(net))}</td></tr>
+    <tr><td colspan="${ac.length}" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;padding:16px 20px;font-size:18px;font-weight:800;font-family:Cairo,Arial">📊 التقارير التفصيلية — ${getSysName()}</td></tr>
+    <tr><td colspan="${ac.length}" style="background:#eff6ff;padding:8px 16px;color:#1e40af;font-size:12px;font-weight:600">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')} | السجلات: ${rptRows.length} | المدين: ${rpt_fmt(totDr)} | الدائن: ${rpt_fmt(totCr)} | الصافي: ${rpt_fmt(Math.abs(net))}</td></tr>
     <tr style="height:8px"><td colspan="${ac.length}"></td></tr>
     <tr>${thHtml}</tr>
     ${bodyRows}
@@ -3151,7 +3552,9 @@ function deleteAcc(id){
   const a=accounts.find(x=>x.id===id);
   if(getChildren(id).length){alert('لا يمكن حذف حساب رئيسي يحتوي على حسابات فرعية');return;}
   if(!confirm(`حذف الحساب "${a.name}"؟`))return;
+  _pushUndo('حذف الحساب '+a.name);
   accounts=accounts.filter(x=>x.id!==id);renderAccounts(); saveToStorage();
+  showUndoToast('🗑️ تم حذف الحساب "'+a.name+'"');
 }
 
 // ============================================================
@@ -3294,9 +3697,11 @@ function saveOBAll(){
 
 function clearAllOB(){
   if(!confirm('مسح جميع الأرصدة الافتتاحية؟'))return;
+  _pushUndo('مسح جميع الأرصدة الافتتاحية');
   Object.keys(openingBalances).forEach(k=>delete openingBalances[k]);
   saveToStorage();
   renderOBTable();
+  showUndoToast('🗑️ تم مسح الأرصدة الافتتاحية');
 }
 
 // ============================================================
@@ -3366,6 +3771,7 @@ function renderJournals(){
 
     // صف رأس القيد
     rows+=`<tr class="jrn-row-head ${j.posted?'jrn-posted':'jrn-draft'} ${!balanced?'jrn-unbalanced':''}">
+      <td style="text-align:center"><input type="checkbox" class="jrn-select-cb" data-id="${j.id}" ${_jrnSelected.has(j.id)?'checked':''} ${j.posted?'disabled title="لا يمكن حذف قيد مرحّل"':''} onchange="toggleJrnSelect(${j.id}, this.checked)"></td>
       <td style="white-space:nowrap;font-weight:800;color:var(--jrn-hue);font-size:12px">${j.num}</td>
       <td style="white-space:nowrap;font-size:12px">${fmtDate(j.date)}</td>
       <td style="font-weight:600;max-width:200px">
@@ -3386,7 +3792,7 @@ function renderJournals(){
           <button class="btn btn-sm" style="color:var(--jrn-hue);border-color:var(--jrn-mid);padding:3px 8px;font-size:11px" onclick="printJrn(${j.id})" title="طباعة">🖨️</button>
           ${j.posted
             ?`<button class="btn btn-sm" style="color:var(--amber);border-color:var(--amber-bg);padding:3px 8px;font-size:11px" onclick="unpostJrn(${j.id})" title="إلغاء الترحيل">↩️ إلغاء</button>
-              <button class="btn btn-sm" style="opacity:0.3;cursor:not-allowed;padding:3px 8px;font-size:11px" disabled title="مرحّل - لا يمكن التعديل">✎</button>
+              <button class="btn btn-sm" style="color:var(--amber);border-color:var(--amber-bg);padding:3px 8px;font-size:11px" onclick="editJrn(${j.id})" title="تعديل (مرحّل - تحذير)">✎</button>
               <button class="btn btn-sm btn-danger" style="opacity:0.3;cursor:not-allowed;padding:3px 8px;font-size:11px" disabled title="مرحّل - لا يمكن الحذف">✕</button>`
             :`<button class="btn btn-sm" style="color:var(--green);border-color:var(--green-bg);padding:3px 8px;font-size:11px" onclick="postJrn(${j.id})" title="ترحيل">✅</button>
               <button class="btn btn-sm" style="padding:3px 8px;font-size:11px" onclick="editJrn(${j.id})" title="تعديل">✎</button>
@@ -3401,6 +3807,7 @@ function renderJournals(){
       const mainAcc=accounts.find(a=>a.id===Number(l.accId));
       const subAcc=accounts.find(a=>a.id===Number(l.subAccId));
       rows+=`<tr class="jrn-row-line">
+        <td></td>
         <td style="color:var(--ink4);font-size:11px;padding-right:24px">${i+1}</td>
         <td></td>
         <td colspan="2" style="font-size:12px">
@@ -3438,7 +3845,7 @@ function renderJournals(){
         }
       }).join('');
       rows += `<tr style="background:var(--white)">
-        <td colspan="9" style="padding:6px 18px 10px 18px;border-bottom:1px dashed var(--border)">
+        <td colspan="10" style="padding:6px 18px 10px 18px;border-bottom:1px dashed var(--border)">
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px">
             <span style="font-size:11px;font-weight:700;color:var(--ink3);white-space:nowrap">📎 مرفقات (${jAttachments.length}):</span>
             ${chips}
@@ -3448,7 +3855,7 @@ function renderJournals(){
     }
 
     // فاصل بين القيود
-    rows+=`<tr class="jrn-row-sep"><td colspan="9"></td></tr>`;
+    rows+=`<tr class="jrn-row-sep"><td colspan="10"></td></tr>`;
   });
 
   body.innerHTML=`
@@ -3456,6 +3863,7 @@ function renderJournals(){
     <table style="width:100%;border-collapse:collapse;font-family:var(--font);font-size:13px">
       <thead>
         <tr style="background:linear-gradient(135deg,var(--jrn-hue),var(--jrn-dark));color:#fff;position:sticky;top:0;z-index:10;box-shadow:0 3px 8px rgba(0,0,0,0.25);">
+          <th style="padding:10px 8px;text-align:center;width:30px"><input type="checkbox" id="jrn-select-all" onchange="toggleJrnSelectAll(this.checked)" title="تحديد الكل"></th>
           <th style="padding:10px 14px;text-align:right;font-size:12px;white-space:nowrap">رقم القيد</th>
           <th style="padding:10px 14px;text-align:right;font-size:12px;white-space:nowrap">التاريخ</th>
           <th style="padding:10px 14px;text-align:right;font-size:12px">البيان</th>
@@ -3511,9 +3919,12 @@ function openJrnModal(){
 
 function editJrn(id){
   const j=journals.find(x=>x.id===id);
+  if(!j){alert('❌ خطأ: لم يتم العثور على القيد المطلوب');return;}
+  
   if(j.posted){
     if(!confirm('⚠️ هذا القيد مرحّل\nهل تريد تعديله؟ (يجب أن يكون القيد متوازناً بعد التعديل)'))return;
   }
+  
   editingJrnId=id;
   document.getElementById('jrn-modal-title').textContent=(j.posted?'تعديل القيد المرحّل ':'تعديل القيد ')+j.num;
   document.getElementById('f-jrn-num').value=j.num;
@@ -3522,8 +3933,24 @@ function editJrn(id){
   populateBranchSelect('f-jrn-branch', j.branch||'');
   document.getElementById('f-jrn-desc').value=j.desc;
   document.getElementById('f-jrn-notes').value=j.notes||'';
-  modalLines=j.lines.map(l=>({...l}));
+  
+  // نسخ الأسطر بشكل آمن مع ضمان الأنواع الصحيحة
+  modalLines=j.lines.map(l=>({
+    id:l.id||lineIdCounter++,
+    accId:l.accId ? Number(l.accId) : '',
+    subAccId:l.subAccId ? Number(l.subAccId) : '',
+    branch:l.branch||'',
+    source:l.source||'',
+    dr:parseFloat(l.dr)||0,
+    cr:parseFloat(l.cr)||0,
+    note:l.note||''
+  }));
+  
   modalAttachments=(j.attachments||[]).map(a=>({...a}));
+  
+  // تأكد من وجود audit trail
+  if(!j.auditTrail) j.auditTrail=[];
+  
   renderAttachList();
   renderLines();
   document.getElementById('jrn-overlay').classList.remove('hidden');
@@ -3557,6 +3984,354 @@ function buildSubOptions(parentId, selectedId){
   });
   return opts;
 }
+
+// ============================================================
+// XLSX IMPORT WIZARD — استيراد قيود من ملف إكسيل (أي شكل ملف)
+// ============================================================
+let xlsxImp = {
+  headers: [],      // أسماء الأعمدة (الصف الأول)
+  rows: [],         // باقي الصفوف كمصفوفات
+  map: {            // تعيين الأعمدة العامة
+    date:'', desc:'', branch:'', source:'', notes:''
+  },
+  drLines: [],       // أسطر المدين: [{accId,subAccId,col}]
+  crLines: [],       // أسطر الدائن: [{accId,subAccId,col}]
+  preview: [],       // القيود المتولّدة بعد المعاينة
+  fileName: ''
+};
+
+function openXlsxImportModal(){
+  xlsxImp = {headers:[], rows:[], map:{date:'',desc:'',branch:'',source:'',notes:''}, drLines:[], crLines:[], preview:[], fileName:''};
+  document.getElementById('xlsx-import-overlay').classList.remove('hidden');
+  xlsxRenderStep1();
+}
+function closeXlsxImportModal(){
+  document.getElementById('xlsx-import-overlay').classList.add('hidden');
+}
+
+// ─── الخطوة 1: رفع الملف ───────────────────────────────────
+function xlsxRenderStep1(){
+  document.getElementById('xlsx-import-body').innerHTML = `
+    <div style="background:#eafaf1;border:1.5px solid #8fd9b6;border-radius:10px;padding:12px 16px;font-size:12.5px;color:#0a5c3f;margin-bottom:16px">
+      <b>💡 إزاي بيشتغل:</b> ارفع أي ملف إكسيل، وبعدين حدّد إنت إيه هو عمود التاريخ / الوصف / المبلغ المدين / المبلغ الدائن... إلخ.
+      النظام هيبني القيود تلقائيًا بناءً على اختيارك — سواء قيد بسيط (سطر مدين وسطر دائن) أو قيد فيه أسطر كتير (سطر مدين واحد وعدة أسطر دائن، أو العكس).
+    </div>
+    <div style="border:2px dashed var(--border2);border-radius:12px;padding:36px 20px;text-align:center;background:var(--fog)">
+      <div style="font-size:34px;margin-bottom:10px">📊</div>
+      <div style="font-weight:700;color:var(--ink2);margin-bottom:12px">اختر ملف إكسيل (.xlsx أو .xls)</div>
+      <input type="file" id="xlsx-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="xlsxHandleFile(this)">
+      <button class="btn btn-jrn" onclick="document.getElementById('xlsx-file-inp').click()">📂 اختيار ملف</button>
+      <div id="xlsx-file-name" style="margin-top:10px;font-size:12px;color:var(--ink3)"></div>
+    </div>
+  `;
+  document.getElementById('xlsx-import-footer').innerHTML = `
+    <button class="btn" onclick="closeXlsxImportModal()">إلغاء</button>
+  `;
+}
+
+function xlsxHandleFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  xlsxImp.fileName = file.name;
+  document.getElementById('xlsx-file-name').textContent = '⏳ جارٍ قراءة: ' + file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array', cellDates:true});
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false, dateNF:'yyyy-mm-dd'});
+      if(!raw || raw.length < 2){
+        alert('⚠️ الملف فاضي أو مفيهوش بيانات كافية (لازم صف عناوين + صف بيانات على الأقل)');
+        return;
+      }
+      xlsxImp.headers = raw[0].map((h,i)=> (h===''||h==null) ? ('عمود '+(i+1)) : String(h));
+      xlsxImp.rows = raw.slice(1).filter(r=> r.some(c=> String(c).trim()!==''));
+      xlsxAutoGuessMapping();
+      xlsxRenderStep2();
+    }catch(err){
+      console.error(err);
+      alert('❌ حصل خطأ في قراءة الملف: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── تخمين تلقائي لأدوار الأعمدة بناءً على اسم العمود ─────
+function xlsxAutoGuessMapping(){
+  const H = xlsxImp.headers;
+  const find = (keys)=>{
+    for(let i=0;i<H.length;i++){
+      const h = H[i].toString().trim();
+      if(keys.some(k=>h.includes(k))) return i;
+    }
+    return '';
+  };
+  xlsxImp.map.date   = find(['تاريخ']);
+  xlsxImp.map.desc   = find(['بيان','وصف','تفاصيل']);
+  xlsxImp.map.branch = find(['فرع','مركز تكلفة','قسم']);
+  xlsxImp.map.source = find(['مصدر','مرجع','رقم الفاتورة','فاتورة']);
+  xlsxImp.map.notes  = find(['ملاحظ']);
+}
+
+// ─── الخطوة 2: تعيين الأعمدة ────────────────────────────────
+function xlsxColOptions(selectedIdx){
+  let opts = '<option value="">— بدون —</option>';
+  xlsxImp.headers.forEach((h,i)=>{
+    opts += `<option value="${i}" ${String(i)===String(selectedIdx)?'selected':''}>${h}</option>`;
+  });
+  return opts;
+}
+
+function xlsxRenderStep2(){
+  // لو مفيش أي أسطر متعرّفة لسه، ابدأ بسطر مدين واحد وسطر دائن واحد كبداية منطقية
+  if(xlsxImp.drLines.length===0) xlsxImp.drLines.push({accId:'',subAccId:'',col:''});
+  if(xlsxImp.crLines.length===0) xlsxImp.crLines.push({accId:'',subAccId:'',col:''});
+
+  const sampleRows = xlsxImp.rows.slice(0,3);
+
+  document.getElementById('xlsx-import-body').innerHTML = `
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:14px">
+      📄 <b>${xlsxImp.fileName}</b> — ${xlsxImp.rows.length} صف بيانات، ${xlsxImp.headers.length} عمود
+    </div>
+
+    <!-- معاينة سريعة للبيانات الخام -->
+    <div style="border:1.5px solid var(--border2);border-radius:10px;overflow-x:auto;margin-bottom:18px;max-height:150px">
+      <table style="font-size:11px;white-space:nowrap">
+        <thead><tr>${xlsxImp.headers.map(h=>`<th style="padding:5px 8px;background:var(--fog2)">${h}</th>`).join('')}</tr></thead>
+        <tbody>${sampleRows.map(r=>`<tr>${xlsxImp.headers.map((h,i)=>`<td style="padding:5px 8px">${r[i]!=null?r[i]:''}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    <!-- الحقول العامة -->
+    <div style="font-weight:800;color:var(--ink2);font-size:13px;margin-bottom:8px">1️⃣ بيانات القيد العامة</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:20px">
+      <div class="form-row"><label>عمود التاريخ</label>
+        <select id="xmp-date" onchange="xlsxImp.map.date=this.value">${xlsxColOptions(xlsxImp.map.date)}</select></div>
+      <div class="form-row"><label>عمود البيان / الوصف</label>
+        <select id="xmp-desc" onchange="xlsxImp.map.desc=this.value">${xlsxColOptions(xlsxImp.map.desc)}</select></div>
+      <div class="form-row"><label>عمود الفرع / مركز التكلفة (اختياري)</label>
+        <select id="xmp-branch" onchange="xlsxImp.map.branch=this.value">${xlsxColOptions(xlsxImp.map.branch)}</select></div>
+      <div class="form-row"><label>عمود المصدر (اختياري)</label>
+        <select id="xmp-source" onchange="xlsxImp.map.source=this.value">${xlsxColOptions(xlsxImp.map.source)}</select></div>
+      <div class="form-row"><label>عمود الملاحظات (اختياري)</label>
+        <select id="xmp-notes" onchange="xlsxImp.map.notes=this.value">${xlsxColOptions(xlsxImp.map.notes)}</select></div>
+    </div>
+
+    <!-- أسطر المدين -->
+    <div style="font-weight:800;color:var(--ink2);font-size:13px;margin-bottom:8px">2️⃣ أسطر المدين — كل صف في الإكسيل هيتحول لسطر (أو أكتر) مدين</div>
+    <div id="xmp-dr-lines"></div>
+    <button class="btn" style="font-size:12px;margin:6px 0 20px" onclick="xlsxAddLine('dr')">+ إضافة سطر مدين</button>
+
+    <!-- أسطر الدائن -->
+    <div style="font-weight:800;color:var(--ink2);font-size:13px;margin-bottom:8px">3️⃣ أسطر الدائن — نفس الفكرة بالنسبة للدائن</div>
+    <div id="xmp-cr-lines"></div>
+    <button class="btn" style="font-size:12px;margin:6px 0" onclick="xlsxAddLine('cr')">+ إضافة سطر دائن</button>
+
+    <div style="background:#fff8ec;border:1.5px solid #f5d08a;border-radius:10px;padding:10px 14px;font-size:12px;color:#7a4004;margin-top:18px">
+      ⚠️ لو صف فيه قيمة صفر أو فاضية في عمود سطر معيّن، هيتجاهل السطر ده بس (مش هيوقف القيد كله). القيد لازم يكون فيه سطر مدين وسطر دائن على الأقل بقيمة أكبر من صفر عشان يتحسب.
+    </div>
+  `;
+
+  xlsxRenderLinesUI('dr');
+  xlsxRenderLinesUI('cr');
+
+  document.getElementById('xlsx-import-footer').innerHTML = `
+    <button class="btn" onclick="closeXlsxImportModal()">إلغاء</button>
+    <button class="btn" onclick="xlsxRenderStep1()">⬅ رجوع لاختيار ملف تاني</button>
+    <button class="btn btn-jrn" onclick="xlsxBuildPreview()">التالي: معاينة القيود ➜</button>
+  `;
+}
+
+function xlsxRenderLinesUI(kind){
+  const list = kind==='dr' ? xlsxImp.drLines : xlsxImp.crLines;
+  const container = document.getElementById(kind==='dr' ? 'xmp-dr-lines' : 'xmp-cr-lines');
+  container.innerHTML = list.map((ln,idx)=>`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;padding:10px;background:var(--fog);border-radius:8px">
+      <div class="form-row" style="margin:0"><label style="font-size:11px">الحساب الرئيسي</label>
+        <select onchange="xlsxLineMainChange('${kind}',${idx},this.value)">${buildAccOptions(ln.accId)}</select></div>
+      <div class="form-row" style="margin:0"><label style="font-size:11px">الحساب الفرعي</label>
+        <select onchange="xlsxSetLine('${kind}',${idx},'subAccId',this.value)">${buildSubOptions(ln.accId, ln.subAccId)}</select></div>
+      <div class="form-row" style="margin:0"><label style="font-size:11px">عمود المبلغ</label>
+        <select onchange="xlsxSetLine('${kind}',${idx},'col',this.value)">${xlsxColOptions(ln.col)}</select></div>
+      <button class="btn-icon" style="color:#b52a2a" onclick="xlsxRemoveLine('${kind}',${idx})" title="حذف السطر">✕</button>
+    </div>
+  `).join('');
+}
+
+function xlsxAddLine(kind){
+  (kind==='dr'?xlsxImp.drLines:xlsxImp.crLines).push({accId:'',subAccId:'',col:''});
+  xlsxRenderLinesUI(kind);
+}
+function xlsxRemoveLine(kind, idx){
+  const list = kind==='dr'?xlsxImp.drLines:xlsxImp.crLines;
+  if(list.length<=1){alert('لازم يفضل سطر واحد على الأقل');return;}
+  list.splice(idx,1);
+  xlsxRenderLinesUI(kind);
+}
+function xlsxSetLine(kind, idx, field, val){
+  const list = kind==='dr'?xlsxImp.drLines:xlsxImp.crLines;
+  list[idx][field] = val;
+}
+function xlsxLineMainChange(kind, idx, val){
+  const list = kind==='dr'?xlsxImp.drLines:xlsxImp.crLines;
+  list[idx].accId = val;
+  list[idx].subAccId = '';
+  xlsxRenderLinesUI(kind);
+}
+
+// ─── تحويل قيمة تاريخ (نص أو Date) لصيغة yyyy-mm-dd ─────────
+function xlsxParseDate(val){
+  if(!val) return new Date().toISOString().split('T')[0];
+  if(val instanceof Date && !isNaN(val)) return val.toISOString().split('T')[0];
+  const s = String(val).trim();
+  // لو جاي بصيغة yyyy-mm-dd أو dd/mm/yyyy أو ما شابه
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0];
+}
+function xlsxParseNum(val){
+  if(val==null || val==='') return 0;
+  const n = parseFloat(String(val).replace(/,/g,'').trim());
+  return isNaN(n) ? 0 : n;
+}
+
+// ─── الخطوة 3: بناء ومعاينة القيود ───────────────────────────
+function xlsxBuildPreview(){
+  const m = xlsxImp.map;
+  const entries = [];
+  let skipped = 0;
+
+  xlsxImp.rows.forEach((row, rIdx)=>{
+    const date   = m.date!=='' ? xlsxParseDate(row[m.date]) : new Date().toISOString().split('T')[0];
+    const desc   = m.desc!=='' ? String(row[m.desc]||'').trim() : ('قيد مستورد #'+(rIdx+1));
+    let branch   = m.branch!=='' ? String(row[m.branch]||'').trim() : '';
+    // حاول تطابق قيمة الفرع مع كود موجود فعلاً في مراكز التكلفة
+    if(branch){
+      const matched = costs.find(c=> c.code===branch || c.name===branch);
+      if(matched) branch = matched.code;
+    }
+    const source = m.source!=='' ? String(row[m.source]||'').trim() : '';
+    const notes  = m.notes!=='' ? String(row[m.notes]||'').trim() : '';
+
+    const lines = [];
+    xlsxImp.drLines.forEach(ln=>{
+      if(ln.col==='' || !ln.accId) return;
+      const amt = xlsxParseNum(row[ln.col]);
+      if(amt>0) lines.push({accId:Number(ln.accId), subAccId: ln.subAccId?Number(ln.subAccId):'', branch, source, dr:amt, cr:0, note:''});
+    });
+    xlsxImp.crLines.forEach(ln=>{
+      if(ln.col==='' || !ln.accId) return;
+      const amt = xlsxParseNum(row[ln.col]);
+      if(amt>0) lines.push({accId:Number(ln.accId), subAccId: ln.subAccId?Number(ln.subAccId):'', branch, source, dr:0, cr:amt, note:''});
+    });
+
+    if(lines.length<2){ skipped++; return; } // محتاج سطرين على الأقل عشان يبقى قيد
+
+    const totalDr = lines.reduce((s,l)=>s+l.dr,0);
+    const totalCr = lines.reduce((s,l)=>s+l.cr,0);
+
+    entries.push({date, branch, desc, notes, source, lines, totalDr, totalCr, balanced: Math.abs(totalDr-totalCr)<0.01});
+  });
+
+  if(entries.length===0){
+    alert('⚠️ مفيش أي قيود اتبنت. تأكد إنك حددت عمود المبلغ والحساب لسطر مدين وسطر دائن على الأقل.');
+    return;
+  }
+
+  xlsxImp.preview = entries;
+  xlsxRenderStep3(skipped);
+}
+
+function xlsxRenderStep3(skipped){
+  const entries = xlsxImp.preview;
+  const balCount = entries.filter(e=>e.balanced).length;
+  const unbalCount = entries.length - balCount;
+  const totalDr = entries.reduce((s,e)=>s+e.totalDr,0);
+  const totalCr = entries.reduce((s,e)=>s+e.totalCr,0);
+
+  document.getElementById('xlsx-import-body').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:120px;background:#eafaf1;border:1.5px solid #8fd9b6;border-radius:10px;padding:10px 14px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:#0a5c3f">${entries.length}</div>
+        <div style="font-size:11px;color:#0a5c3f">قيد جاهز للاستيراد</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:${unbalCount?'#fff0f0':'#eafaf1'};border:1.5px solid ${unbalCount?'#f0a0a0':'#8fd9b6'};border-radius:10px;padding:10px 14px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:${unbalCount?'#b52a2a':'#0a5c3f'}">${unbalCount}</div>
+        <div style="font-size:11px;color:${unbalCount?'#b52a2a':'#0a5c3f'}">قيد غير متوازن ⚠️</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--fog);border:1.5px solid var(--border2);border-radius:10px;padding:10px 14px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--ink2)">${skipped}</div>
+        <div style="font-size:11px;color:var(--ink3)">صف اتجاهل (بدون قيمة كافية)</div>
+      </div>
+    </div>
+
+    ${unbalCount ? `<div style="background:#fff0f0;border:1.5px solid #f0a0a0;border-radius:10px;padding:10px 14px;font-size:12px;color:#b52a2a;margin-bottom:14px">
+      ⚠️ فيه ${unbalCount} قيد المدين فيه ≠ الدائن. ممكن تكمل الاستيراد وتصلحهم بعدين من صفحة القيود، أو ترجع تظبط التعيين.
+    </div>` : ''}
+
+    <div style="border:1.5px solid var(--border2);border-radius:10px;overflow:hidden">
+      <table style="font-size:12px">
+        <thead><tr style="background:var(--fog2)">
+          <th style="padding:6px 10px">التاريخ</th><th style="padding:6px 10px">البيان</th>
+          <th style="padding:6px 10px">الفرع</th><th style="padding:6px 10px">عدد الأسطر</th>
+          <th style="padding:6px 10px">مدين</th><th style="padding:6px 10px">دائن</th><th style="padding:6px 10px">الحالة</th>
+        </tr></thead>
+        <tbody>
+          ${entries.slice(0,50).map(e=>`
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:6px 10px">${e.date}</td>
+              <td style="padding:6px 10px">${e.desc}</td>
+              <td style="padding:6px 10px">${e.branch||'—'}</td>
+              <td style="padding:6px 10px">${e.lines.length}</td>
+              <td style="padding:6px 10px;color:#0f4a8a">${e.totalDr.toLocaleString('ar-EG')}</td>
+              <td style="padding:6px 10px;color:#7a4004">${e.totalCr.toLocaleString('ar-EG')}</td>
+              <td style="padding:6px 10px">${e.balanced?'✅':'⚠️'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      ${entries.length>50?`<div style="padding:8px;text-align:center;font-size:11px;color:var(--ink4)">... و${entries.length-50} قيد تاني</div>`:''}
+    </div>
+
+    <div style="margin-top:14px;font-size:12px;color:var(--ink3)">إجمالي المدين: <b>${totalDr.toLocaleString('ar-EG')}</b> — إجمالي الدائن: <b>${totalCr.toLocaleString('ar-EG')}</b></div>
+  `;
+
+  document.getElementById('xlsx-import-footer').innerHTML = `
+    <button class="btn" onclick="closeXlsxImportModal()">إلغاء</button>
+    <button class="btn" onclick="xlsxRenderStep2()">⬅ رجوع للتعيين</button>
+    <button class="btn btn-jrn" onclick="xlsxConfirmImport()">✅ استيراد ${entries.length} قيد</button>
+  `;
+}
+
+function xlsxConfirmImport(){
+  const entries = xlsxImp.preview;
+  entries.forEach(e=>{
+    const jId = nextJrnId++;
+    const lines = e.lines.map(l=>({
+      id: lineIdCounter++,
+      accId: l.accId, subAccId: l.subAccId || '', branch: l.branch||'', source: l.source||'',
+      dr: l.dr, cr: l.cr, note: l.note||''
+    }));
+    journals.push({
+      id: jId, num: 'JRN-'+String(jId).padStart(4,'0'), date: e.date, branch: e.branch||'',
+      type:'قيد عادي', desc: e.desc, notes: e.notes||'', posted:false,
+      lines, attachments:[], dr: e.totalDr, cr: e.totalCr,
+      createdBy:'admin', createdAt: new Date().toISOString().split('T')[0],
+      auditTrail:[], lastEditBy:'', lastEditAt:''
+    });
+  });
+  closeXlsxImportModal();
+  renderJournals();
+  saveToStorage();
+  showToast('✅ تم استيراد '+entries.length+' قيد من الإكسيل بنجاح', 'jrn');
+}
+
 
 // ── Smart Account Search Autocomplete ─────────────────────────────────────────
 let _acActiveIdx = -1;
@@ -3759,7 +4534,12 @@ function renderLines(){
 }
 
 function lineChange(idx, field, val){
-  if(field==='subAccId') val = val ? Number(val) : '';
+  // تحويل آمن للأنواع
+  if(field==='accId' || field==='subAccId') {
+    val = val ? Number(val) : '';
+  } else if(field==='dr' || field==='cr') {
+    val = parseFloat(val) || 0;
+  }
   modalLines[idx][field]=val;
   updateTotals();
 }
@@ -3783,30 +4563,81 @@ function saveJrn(){
   const date=document.getElementById('f-jrn-date').value;
   if(!desc){alert('يرجى إدخال بيان القيد');return;}
   if(!date){alert('يرجى إدخال تاريخ القيد');return;}
-  const validLines=modalLines.filter(l=>l.accId&&(l.dr||l.cr));
-  if(validLines.length<2){alert('يجب أن يحتوي القيد على سطرين على الأقل');return;}
-  const dr=validLines.reduce((s,l)=>s+(parseFloat(l.dr)||0),0);
-  const cr=validLines.reduce((s,l)=>s+(parseFloat(l.cr)||0),0);
+  
+  // تنظيف: احذف الأسطر الفارغة تماماً (بدون accId وبدون مبلغ)
+  const linesToSave=modalLines.filter(l=>(l.accId!=null && l.accId!==''));
+  
+  // تحقق من عدد السطور
+  if(linesToSave.length<2){alert('يجب أن يحتوي القيد على سطرين على الأقل (مع حساب لكل منهما)');return;}
+  
+  // حساب المجاميع من السطور المحفوظة فقط
+  const dr=linesToSave.reduce((s,l)=>s+(parseFloat(l.dr)||0),0);
+  const cr=linesToSave.reduce((s,l)=>s+(parseFloat(l.cr)||0),0);
+  
+  // تحقق من التوازن
   if(Math.abs(dr-cr)>0.001){
     alert('⚠️ لا يمكن حفظ قيد غير متوازن\nالفرق: '+fmtNum(Math.abs(dr-cr))+'\nيرجى تعديل المبالغ حتى يتوازن القيد');
     return;
   }
+  
   const now=new Date().toISOString().split('T')[0];
   if(editingJrnId){
+    // تعديل قيد موجود
     const j=journals.find(x=>x.id===editingJrnId);
-    j.date=date;j.branch=document.getElementById('f-jrn-branch').value;
-    j.desc=desc;j.notes=document.getElementById('f-jrn-notes').value;
-    j.lines=validLines;j.dr=dr;j.cr=cr;
+    if(!j){alert('❌ خطأ: لم يتم العثور على القيد المطلوب');return;}
+    if(j.posted && !confirm('⚠️ تحذير!\nأنت بصدد تعديل قيد مرحّل.\nهذا قد يؤثر على الأرقام المالية المسجلة.\nهل تريد المتابعة؟')){return;}
+    
+    // تحديث البيانات الأساسية
+    j.date=date;
+    j.branch=document.getElementById('f-jrn-branch').value;
+    j.desc=desc;
+    j.notes=document.getElementById('f-jrn-notes').value;
+    
+    // تحديث الأسطر: احفظ السطور ذات الحسابات فقط
+    j.lines=linesToSave.map(l=>({
+      accId:Number(l.accId)||'',
+      subAccId:Number(l.subAccId)||'',
+      branch:l.branch||'',
+      source:l.source||'',
+      dr:parseFloat(l.dr)||0,
+      cr:parseFloat(l.cr)||0,
+      note:l.note||''
+    }));
+    
+    j.dr=dr;
+    j.cr=cr;
     j.attachments=modalAttachments.slice();
-    j.lastEditBy='admin';j.lastEditAt=now;
+    j.lastEditBy='admin';
+    j.lastEditAt=now;
     j.auditTrail.push({by:'admin',at:now,action:j.posted?'تعديل بعد ترحيل':'تعديل'});
   } else {
-    journals.push({id:nextJrnId,num:'JRN-'+String(nextJrnId).padStart(4,'0'),
-      date,branch:document.getElementById('f-jrn-branch').value,
-      type:'قيد عادي',desc,notes:document.getElementById('f-jrn-notes').value,
-      lines:validLines,attachments:modalAttachments.slice(),dr,cr,
+    // إنشاء قيد جديد
+    journals.push({
+      id:nextJrnId,
+      num:'JRN-'+String(nextJrnId).padStart(4,'0'),
+      date,
+      branch:document.getElementById('f-jrn-branch').value,
+      type:'قيد عادي',
+      desc,
+      notes:document.getElementById('f-jrn-notes').value,
+      lines:linesToSave.map(l=>({
+        accId:Number(l.accId)||'',
+        subAccId:Number(l.subAccId)||'',
+        branch:l.branch||'',
+        source:l.source||'',
+        dr:parseFloat(l.dr)||0,
+        cr:parseFloat(l.cr)||0,
+        note:l.note||''
+      })),
+      attachments:modalAttachments.slice(),
+      dr,cr,
       posted:false,
-      createdBy:'admin',createdAt:now,auditTrail:[],lastEditBy:'',lastEditAt:''});
+      createdBy:'admin',
+      createdAt:now,
+      auditTrail:[],
+      lastEditBy:'',
+      lastEditAt:''
+    });
     nextJrnId++;
   }
   closeJrnModal();renderJournals(); saveToStorage();
@@ -4063,11 +4894,69 @@ function unpostJrn(id){
   renderJournals(); saveToStorage();
 }
 
+// ============================================================
+// JOURNAL BULK SELECT / DELETE
+// ============================================================
+let _jrnSelected = new Set();
+
+function toggleJrnSelect(id, checked){
+  if(checked) _jrnSelected.add(id); else _jrnSelected.delete(id);
+  const allCb = document.getElementById('jrn-select-all');
+  if(allCb){
+    const visibleIds = [...document.querySelectorAll('.jrn-select-cb:not([disabled])')].map(cb=>Number(cb.dataset.id));
+    allCb.checked = visibleIds.length>0 && visibleIds.every(vid=>_jrnSelected.has(vid));
+  }
+}
+
+function toggleJrnSelectAll(checked){
+  document.querySelectorAll('.jrn-select-cb:not([disabled])').forEach(cb=>{
+    const id=Number(cb.dataset.id);
+    cb.checked=checked;
+    if(checked) _jrnSelected.add(id); else _jrnSelected.delete(id);
+  });
+}
+
+function deleteSelectedJrns(){
+  const ids=[...journals.filter(j=>_jrnSelected.has(j.id))];
+  if(!ids.length){ alert('⚠️ لم يتم تحديد أي قيود.\nحدد القيود المطلوبة أولاً بالمربعات جانب كل قيد.'); return; }
+  const postedCount = ids.filter(j=>j.posted).length;
+  const toDelete = ids.filter(j=>!j.posted);
+  if(postedCount) alert('⚠️ ملحوظة: '+postedCount+' من القيود المحددة مرحّلة ولن يتم حذفها. لازم تلغي ترحيلها أولاً لو عايز تحذفها.');
+  if(!toDelete.length) return;
+  if(!confirm('هل أنت متأكد من حذف '+toDelete.length+' قيد محدد؟\nهذا الإجراء يمكن التراجع عنه بعد الحذف مباشرة.'))return;
+  _pushUndo('حذف '+toDelete.length+' قيد محدد');
+  const delIds=new Set(toDelete.map(j=>j.id));
+  journals=journals.filter(j=>!delIds.has(j.id));
+  toDelete.forEach(j=>_jrnSelected.delete(j.id));
+  renderJournals(); saveToStorage();
+  showUndoToast('🗑️ تم حذف '+toDelete.length+' قيد محدد');
+}
+
+function deleteAllJrns(){
+  const deletable = journals.filter(j=>!j.posted);
+  const postedCount = journals.length - deletable.length;
+  if(!journals.length){ alert('⚠️ لا توجد قيود لحذفها.'); return; }
+  if(!deletable.length){ alert('⚠️ كل القيود الحالية مرحّلة ولا يمكن حذفها. لازم تلغي الترحيل أولاً.'); return; }
+  const msg = postedCount
+    ? '⚠️ تحذير خطير!\nسيتم حذف '+deletable.length+' قيد (غير المرحّلة).\n'+postedCount+' قيد مرحّل هيفضل زي ما هو.\n\nهل أنت متأكد؟'
+    : '⚠️ تحذير خطير جدًا!\nسيتم حذف كل القيود ('+deletable.length+' قيد) نهائيًا.\n\nهل أنت متأكد من المتابعة؟';
+  if(!confirm(msg))return;
+  if(!confirm('تأكيد أخير: هل أنت متأكد فعلاً من حذف كل هذه القيود؟'))return;
+  _pushUndo('حذف كل القيود ('+deletable.length+' قيد)');
+  const delIds=new Set(deletable.map(j=>j.id));
+  journals=journals.filter(j=>!delIds.has(j.id));
+  _jrnSelected.clear();
+  renderJournals(); saveToStorage();
+  showUndoToast('🗑️ تم حذف '+deletable.length+' قيد (كل القيود غير المرحّلة)');
+}
+
 function deleteJrn(id){
   const j=journals.find(x=>x.id===id);
   if(j.posted){alert('⚠️ لا يمكن حذف قيد مرحّل\nقم بإلغاء الترحيل أولاً');return;}
   if(!confirm(`حذف القيد "${j.num}" - ${j.desc}؟`))return;
+  _pushUndo('حذف القيد '+j.num+' - '+j.desc);
   journals=journals.filter(x=>x.id!==id);renderJournals(); saveToStorage();
+  showUndoToast('🗑️ تم حذف القيد "'+j.num+'"');
 }
 
 // open non-image files in new tab
@@ -4099,7 +4988,11 @@ function printJrn(id){
   </tr>`).join('');
   const drTotal=j.lines.reduce((s,l)=>s+(parseFloat(l.dr)||0),0);
   const crTotal=j.lines.reduce((s,l)=>s+(parseFloat(l.cr)||0),0);
-  showPrintOverlay(`
+  showPrintOverlay(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <title>قيد رقم ${j.num}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Cairo',sans-serif;background:#f0f4f8;color:#0f1923;padding:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{background:#fff;padding:12px}}</style>
+  </head><body>
     <div style="max-width:900px;margin:0 auto;padding:30px;font-family:'Cairo',sans-serif;color:#0f1923;font-size:13px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #7c3aed">
         <div>
@@ -4139,7 +5032,8 @@ function printJrn(id){
         <span>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</span>
         <span>${getSysName()}</span>
       </div>
-    </div>`);
+    </div>
+  </body></html>`);
 }
 
 // ============================================================
@@ -4506,7 +5400,11 @@ function msRemoveTag(key, id){
   if(key==='main'){rptSel.sub=[];msRenderTags('sub');}
 }
 
-function rpt_fmt(n){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function rpt_fmt(n){
+  const num = Number(n||0);
+  const rounded = Math.round(num);
+  return rounded.toLocaleString('en-US');
+}
 function rpt_fmtDate(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 
 // All available columns definition
@@ -4675,8 +5573,8 @@ function rpt_renderTable(rows, q){
       if(id==='subAcc') return `<td style="font-size:12px;color:var(--ink3)">${hl(r.subAcc)}</td>`;
       if(id==='cost') return `<td style="font-size:12px">${hl(r.cost)}</td>`;
       if(id==='source') return `<td>${r.source&&r.source!=='—'?`<span class="rpt-src-pill">${hl(r.source)}</span>`:'<span style="color:var(--ink4)">—</span>'}</td>`;
-      if(id==='dr') return `<td class="num-td rpt-dr">${r.dr?rpt_fmt(r.dr):'<span class="rpt-zero">—</span>'}</td>`;
-      if(id==='cr') return `<td class="num-td rpt-cr">${r.cr?rpt_fmt(r.cr):'<span class="rpt-zero">—</span>'}</td>`;
+      if(id==='dr') return `<td class="num-td rpt-dr">${r.dr?rpt_fmt(r.dr)+' <span style="font-size:0.75em;color:var(--ink4)">ج.م</span>':'<span class="rpt-zero">—</span>'}</td>`;
+      if(id==='cr') return `<td class="num-td rpt-cr">${r.cr?rpt_fmt(r.cr)+' <span style="font-size:0.75em;color:var(--ink4)">ج.م</span>':'<span class="rpt-zero">—</span>'}</td>`;
       return '<td></td>';
     });
     return `<tr>${cells.join('')}</tr>`;
@@ -4684,8 +5582,8 @@ function rpt_renderTable(rows, q){
 
   // Footer totals
   const footerSpan = ac.filter(id=>id!=='dr'&&id!=='cr').length;
-  const drFoot = ac.includes('dr')?`<td class="num-td rpt-dr">${rpt_fmt(totDr)}</td>`:'';
-  const crFoot = ac.includes('cr')?`<td class="num-td rpt-cr">${rpt_fmt(totCr)}</td>`:'';
+  const drFoot = ac.includes('dr')?`<td class="num-td rpt-dr">${rpt_fmt(totDr)} <span style="font-size:0.75em;color:var(--ink4)">ج.م</span></td>`:'';
+  const crFoot = ac.includes('cr')?`<td class="num-td rpt-cr">${rpt_fmt(totCr)} <span style="font-size:0.75em;color:var(--ink4)">ج.م</span></td>`:'';
 
   area.innerHTML=`<div class="rpt-result-card">
     <div class="rpt-result-head">
@@ -4729,6 +5627,30 @@ function rpt_clearSearch(){
 // ============================================================
 function rpt_printPDF(){
   if(!rptRows||!rptRows.length){ alert('لا توجد بيانات — قم بتشغيل التقرير أولاً'); return; }
+
+  // ── Get selected accounts ──
+  var selectedAccounts = [];
+  var mainAccounts = rptSel.main.map(id => {
+    var acc = accounts.find(a => a.id == id);
+    return acc ? `${acc.code} - ${acc.name}` : '';
+  }).filter(a => a);
+  
+  var subAccounts = rptSel.sub.map(id => {
+    var acc = accounts.find(a => a.id == id);
+    return acc ? `${acc.code} - ${acc.name}` : '';
+  }).filter(a => a);
+  
+  var accountsListHTML = '';
+  if(mainAccounts.length > 0 || subAccounts.length > 0) {
+    accountsListHTML = '<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;margin-top:6px;font-size:11px">';
+    if(mainAccounts.length > 0) {
+      accountsListHTML += '<div style="opacity:.9;margin-bottom:4px"><strong>الحسابات الرئيسية:</strong> ' + mainAccounts.join(' • ') + '</div>';
+    }
+    if(subAccounts.length > 0) {
+      accountsListHTML += '<div style="opacity:.85"><strong>الحسابات الفرعية:</strong> ' + subAccounts.join(' • ') + '</div>';
+    }
+    accountsListHTML += '</div>';
+  }
 
   /* ── meta ── */
   var colHeaders = {
@@ -4775,8 +5697,8 @@ function rpt_printPDF(){
       if(id==='subAcc')  return '<td class="sub-td">'+r.subAcc+'</td>';
       if(id==='cost')    return '<td class="cost-td">'+r.cost+'</td>';
       if(id==='source')  return '<td class="src-td">'+(r.source&&r.source!='—'?r.source:'<span class="zero">—</span>')+'</td>';
-      if(id==='dr')      return '<td class="dr-td">'+(r.dr?fmt(r.dr):'<span class="zero">—</span>')+'</td>';
-      if(id==='cr')      return '<td class="cr-td">'+(r.cr?fmt(r.cr):'<span class="zero">—</span>')+'</td>';
+      if(id==='dr')      return '<td class="dr-td">'+(r.dr?fmt(r.dr)+' <span style="font-size:0.8em">ج.م</span>':'<span class="zero">—</span>')+'</td>';
+      if(id==='cr')      return '<td class="cr-td">'+(r.cr?fmt(r.cr)+' <span style="font-size:0.8em">ج.م</span>':'<span class="zero">—</span>')+'</td>';
       return '<td></td>';
     });
     return '<tr class="'+(alt?'alt':'')+'">'+cells.join('')+'</tr>';
@@ -4784,8 +5706,8 @@ function rpt_printPDF(){
 
   /* ── tfoot ── */
   var footSpan = ac.filter(function(id){return id!=='dr'&&id!=='cr';}).length;
-  var drFoot   = ac.indexOf('dr')>=0 ? '<td class="tot-dr">'+fmt(totDr)+'</td>' : '';
-  var crFoot   = ac.indexOf('cr')>=0 ? '<td class="tot-cr">'+fmt(totCr)+'</td>' : '';
+  var drFoot   = ac.indexOf('dr')>=0 ? '<td class="tot-dr">'+fmt(totDr)+' <span style="font-size:0.8em">ج.م</span></td>' : '';
+  var crFoot   = ac.indexOf('cr')>=0 ? '<td class="tot-cr">'+fmt(totCr)+' <span style="font-size:0.8em">ج.م</span></td>' : '';
 
   /* ── HTML ── */
   var css = [
@@ -4799,7 +5721,7 @@ function rpt_printPDF(){
     /* ════════════════════════════
        HEADER BAND
     ════════════════════════════ */
-    '.hdr{background:linear-gradient(120deg,#960d2b 0%,#c8193a 45%,#e8294a 100%);color:#fff;padding:0;position:relative;overflow:hidden}',
+    '.hdr{background:linear-gradient(120deg,#1e40af 0%,#2563eb 45%,#3b82f6 100%);color:#fff;padding:0;position:relative;overflow:hidden}',
     '.hdr::before{content:"";position:absolute;top:-40px;left:-40px;width:200px;height:200px;background:rgba(255,255,255,.06);border-radius:50%}',
     '.hdr::after{content:"";position:absolute;bottom:-30px;right:60px;width:140px;height:140px;background:rgba(255,255,255,.05);border-radius:50%}',
 
@@ -4839,9 +5761,9 @@ function rpt_printPDF(){
     '.kpi.k-dr  .kv{color:#0f4a8a}',
     '.kpi.k-cr  .kv{color:#7a4004}',
     '.kpi.k-ok  .kv{color:#0a7c55}',
-    '.kpi.k-bad .kv{color:#c8193a}',
+    '.kpi.k-bad .kv{color:#2563eb}',
     '.kpi.k-ok{background:#f0fdf8}',
-    '.kpi.k-bad{background:#fff0f3}',
+    '.kpi.k-bad{background:#eff6ff}',
 
     /* ════════════════════════════
        TABLE
@@ -4920,12 +5842,13 @@ function rpt_printPDF(){
           +'<div class="hdr-logo-text">'
             +'<h1>'+sysName+'</h1>'
             +'<p>&#x1F4CB; التقارير التفصيلية — '+period+'</p>'
+            +accountsListHTML
           +'</div>'
         +'</div>'
         +'<div class="hdr-stats">'
           +'<div class="hdr-stat"><div class="sv">'+rptRows.length+'</div><div class="sl">سجل</div></div>'
-          +'<div class="hdr-stat"><div class="sv">'+fmt(totDr)+'</div><div class="sl">إجمالي مدين</div></div>'
-          +'<div class="hdr-stat"><div class="sv">'+fmt(totCr)+'</div><div class="sl">إجمالي دائن</div></div>'
+          +'<div class="hdr-stat"><div class="sv">'+fmt(totDr)+' <span style="font-size:0.7em">ج.م</span></div><div class="sl">إجمالي مدين</div></div>'
+          +'<div class="hdr-stat"><div class="sv">'+fmt(totCr)+' <span style="font-size:0.7em">ج.م</span></div><div class="sl">إجمالي دائن</div></div>'
           +'<div class="hdr-stat"><div class="sv">'+fmt(Math.abs(net))+'</div><div class="sl">الرصيد</div></div>'
         +'</div>'
       +'</div>'
@@ -4940,15 +5863,15 @@ function rpt_printPDF(){
       +'<div class="info-sep"></div>'
       +'<div class="info-item"><span class="lbl">&#x1F4CA; عدد السجلات</span><span class="val">'+rptRows.length+'</span></div>'
       +'<div class="info-sep"></div>'
-      +'<div class="info-item"><span class="lbl">&#x1F4B0; الرصيد</span><span class="val">'+fmt(Math.abs(net))+(net>0?' مدين':net<0?' دائن':'')+'</span></div>'
+      +'<div class="info-item"><span class="lbl">&#x1F4B0; الرصيد</span><span class="val">'+fmt(Math.abs(net))+'</span></div>'
     +'</div>'
 
     /* ══ KPI CARDS ══ */
     +'<div class="kpis">'
       +'<div class="kpi k-cnt"><div class="kl">&#x1F522; عدد السجلات</div><div class="kv">'+rptRows.length+'</div></div>'
-      +'<div class="kpi k-dr"><div class="kl">&#x1F4E5; إجمالي المدين</div><div class="kv">'+fmt(totDr)+'</div></div>'
-      +'<div class="kpi k-cr"><div class="kl">&#x1F4E4; إجمالي الدائن</div><div class="kv">'+fmt(totCr)+'</div></div>'
-      +'<div class="kpi '+(net>=0?'k-dr':'k-cr')+'"><div class="kl">&#x1F4B0; الرصيد</div><div class="kv">'+fmt(Math.abs(net))+(net>0?' م':net<0?' د':'')+'</div></div>'
+      +'<div class="kpi k-dr"><div class="kl">&#x1F4E5; إجمالي المدين</div><div class="kv">'+fmt(totDr)+' <span style="font-size:0.7em">ج.م</span></div></div>'
+      +'<div class="kpi k-cr"><div class="kl">&#x1F4E4; إجمالي الدائن</div><div class="kv">'+fmt(totCr)+' <span style="font-size:0.7em">ج.م</span></div></div>'
+      +'<div class="kpi '+(net>=0?'k-dr':'k-cr')+'"><div class="kl">&#x1F4B0; الرصيد</div><div class="kv">'+fmt(Math.abs(net))+'</div></div>'
     +'</div>'
 
     /* ══ TABLE ══ */
