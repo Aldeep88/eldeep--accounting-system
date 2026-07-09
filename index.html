@@ -1034,11 +1034,17 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
       <button id="undo-btn" onclick="undoLast()" style="width:100%;padding:8px;background:rgba(109,40,217,0.20);color:#b09af8;border:1px solid rgba(109,40,217,0.35);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;opacity:0.4" title="لا يوجد إجراء للتراجع">
         ↩️ تراجع عن آخر إجراء
       </button>
+      <button onclick="exportJSON_full()" style="width:100%;padding:8px;background:rgba(52,66,86,0.85);color:#a8c0d6;border:1px solid rgba(168,192,214,0.2);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="حفظ كل بيانات البرنامج">
+        💾 حفظ كامل للبرنامج
+      </button>
       <button onclick="importJSON()" style="width:100%;padding:8px;background:rgba(30,45,61,0.7);color:#7a9ab5;border:1px solid rgba(120,160,190,0.15);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="استيراد بيانات محفوظة">
         📂 استيراد / استعادة
       </button>
       <button onclick="openSettingsModal()" style="width:100%;padding:8px;background:rgba(26,107,186,0.18);color:#7ec4f8;border:1px solid rgba(26,107,186,0.3);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="إعدادات النظام">
         ⚙️ إعدادات النظام
+      </button>
+      <button onclick="clearStorage()" style="width:100%;padding:8px;background:rgba(181,42,42,0.18);color:#f0a0a0;border:1px solid rgba(181,42,42,0.25);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="مسح البيانات المحفوظة تلقائيًا والرجوع للافتراضي">
+        🗑️ مسح الحفظ التلقائي
       </button>
     </div>
     <div id="sync-indicator" class="sync-indicator syncing">
@@ -1662,7 +1668,7 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
     <h2>⚙️ إعدادات النظام</h2>
     <button class="btn-icon" onclick="closeSettingsModal()">✕</button>
   </div>
-  <div class="modal-body" style="max-height:80vh;overflow-y:auto">
+  <div class="modal-body" style="max-height:none;overflow-y:visible">
 
     <!-- ─── قسم الشركة ─── -->
     <div style="background:var(--acc-soft);border:1.5px solid var(--acc-mid);border-radius:10px;padding:11px 16px;font-size:12.5px;color:var(--acc-dark);margin-bottom:12px">
@@ -1755,25 +1761,6 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
       </div>
     </div>
 
-    <!-- ─── قسم النسخ الاحتياطي والاسترداد ─── -->
-    <div style="border:2px solid var(--border2);border-radius:12px;overflow:hidden;margin-top:16px">
-      <div style="background:var(--fog2);padding:12px 16px;border-bottom:1.5px solid var(--border)">
-        <div style="font-weight:800;color:var(--ink2);font-size:13.5px">🗄️ النسخ الاحتياطي والاسترداد</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">أدوات حساسة — اتنقلت هنا عشان محدش يدوس عليها بالغلط أثناء الشغل</div>
-      </div>
-      <div style="padding:14px;display:flex;flex-direction:column;gap:9px;background:#fff">
-        <button onclick="closeSettingsModal();exportJSON_full()" class="btn" style="width:100%;justify-content:center">
-          💾 حفظ كامل للبرنامج
-        </button>
-        <button onclick="closeSettingsModal();openRestoreModal()" class="btn" style="width:100%;justify-content:center;color:#6d28d9;border-color:#b09af8">
-          🔄 استرداد قيود
-        </button>
-        <button onclick="clearStorage()" class="btn" style="width:100%;justify-content:center;color:#b52a2a;border-color:#f0a0a0">
-          🗑️ مسح الحفظ التلقائي
-        </button>
-      </div>
-    </div>
-
   </div>
   <div class="modal-footer">
     <button class="btn" onclick="closeSettingsModal()">إلغاء</button>
@@ -1794,21 +1781,6 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
     <!-- يتغيّر محتواه حسب الخطوة عن طريق JS -->
   </div>
   <div class="modal-footer" id="xlsx-import-footer"></div>
-</div>
-</div>
-
-<!-- ═══════════ استرداد قيود من نسخة احتياطية (إكسيل أو ملف البرنامج) ═══════════ -->
-<div class="overlay hidden" id="restore-overlay" onclick="if(event.target===this)closeRestoreModal()">
-<div class="modal" style="max-width:900px">
-  <div class="modal-header">
-    <div class="modal-header-accent" style="background:#6d28d9"></div>
-    <h2>🔄 استرداد قيود</h2>
-    <button class="btn-icon" onclick="closeRestoreModal()">✕</button>
-  </div>
-  <div class="modal-body" id="restore-body" style="max-height:78vh;overflow-y:auto">
-    <!-- يتغيّر محتواه حسب الخطوة عن طريق JS -->
-  </div>
-  <div class="modal-footer" id="restore-footer"></div>
 </div>
 </div>
 
@@ -4358,288 +4330,6 @@ function xlsxConfirmImport(){
   renderJournals();
   saveToStorage();
   showToast('✅ تم استيراد '+entries.length+' قيد من الإكسيل بنجاح', 'jrn');
-}
-
-
-// ============================================================
-// استرداد قيود (Restore) من نسخة احتياطية — إكسيل أو ملف البرنامج
-// ============================================================
-let restoreImp = { entries: [], mode:'add', source:'' };
-
-function openRestoreModal(){
-  restoreImp = { entries: [], mode:'add', source:'' };
-  document.getElementById('restore-overlay').classList.remove('hidden');
-  restoreRenderStep1();
-}
-function closeRestoreModal(){
-  document.getElementById('restore-overlay').classList.add('hidden');
-}
-
-// ─── الخطوة 1: اختيار نوع الملف ─────────────────────────────
-function restoreRenderStep1(){
-  document.getElementById('restore-body').innerHTML = `
-    <div style="background:#f4f0ff;border:1.5px solid #b09af8;border-radius:10px;padding:12px 16px;font-size:12.5px;color:#4a1aaa;margin-bottom:18px">
-      <b>💡 إزاي بيشتغل:</b> اختر ملف نسخة احتياطية للقيود — سواء ملف إكسيل مُصدَّر من صفحة القيود (📊 Excel)، أو ملف بصيغة البرنامج (💾 حفظ / .dsp / .json). هيتم عرض القيود قبل الاسترداد، وتقدر تختار تضيفها على القيود الحالية أو تستبدل بيها كل القيود.
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div style="border:2px dashed var(--border2);border-radius:12px;padding:30px 16px;text-align:center;background:var(--fog)">
-        <div style="font-size:32px;margin-bottom:10px">📊</div>
-        <div style="font-weight:700;color:var(--ink2);margin-bottom:12px;font-size:13px">ملف إكسيل مُصدَّر من السيستم</div>
-        <input type="file" id="restore-excel-inp" accept=".xlsx,.xls" style="display:none" onchange="restoreHandleExcelFile(this)">
-        <button class="btn btn-jrn" onclick="document.getElementById('restore-excel-inp').click()">📂 اختيار ملف إكسيل</button>
-      </div>
-      <div style="border:2px dashed var(--border2);border-radius:12px;padding:30px 16px;text-align:center;background:var(--fog)">
-        <div style="font-size:32px;margin-bottom:10px">💾</div>
-        <div style="font-weight:700;color:var(--ink2);margin-bottom:12px;font-size:13px">ملف بصيغة البرنامج (.dsp / .json)</div>
-        <input type="file" id="restore-json-inp" accept=".dsp,.json" style="display:none" onchange="restoreHandleJsonFile(this)">
-        <button class="btn btn-jrn" onclick="document.getElementById('restore-json-inp').click()">📂 اختيار ملف البرنامج</button>
-      </div>
-    </div>
-    <div id="restore-file-name" style="margin-top:14px;font-size:12px;color:var(--ink3);text-align:center"></div>
-  `;
-  document.getElementById('restore-footer').innerHTML = `
-    <button class="btn" onclick="closeRestoreModal()">إلغاء</button>
-  `;
-}
-
-// ─── قراءة ملف إكسيل بنفس شكل تصدير صفحة القيود ─────────────
-function restoreHandleExcelFile(input){
-  const file = input.files && input.files[0];
-  if(!file) return;
-  restoreImp.source = file.name;
-  document.getElementById('restore-file-name').textContent = '⏳ جارٍ قراءة: ' + file.name;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, {type:'array', cellDates:true});
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false});
-      const hdrIdx = raw.findIndex(r => String(r[0]||'').trim()==='رقم القيد' && String(r[1]||'').trim()==='التاريخ');
-      if(hdrIdx === -1){
-        alert('❌ الملف مش بنفس شكل تصدير القيود من السيستم. استخدم زرار "📊 Excel" من صفحة القيود لإنشاء الملف الأصلي.');
-        return;
-      }
-      const dataRows = raw.slice(hdrIdx+1);
-      const codeOf = (s)=> String(s||'').split(' - ')[0].trim();
-      let lastNum='', lastDate='', lastDesc='';
-      const grouped = {};
-      const order = [];
-      for(const row of dataRows){
-        const num   = String(row[0]||'').trim();
-        const dateC = String(row[1]||'').trim();
-        const desc  = String(row[2]||'').trim();
-        const subC  = String(row[4]||'').trim();
-        const drC   = row[5];
-        const crC   = row[6];
-        const costC = String(row[7]||'').trim();
-        if(num.includes('الإجمالي') || (!num && !dateC && !desc && !subC && !drC && !crC)) continue;
-        if(num){ lastNum=num; lastDate=dateC; lastDesc=desc; }
-        const useNum = num || lastNum;
-        if(!useNum) continue;
-        if(!grouped[useNum]){
-          grouped[useNum] = {date: num?dateC:lastDate, desc: num?desc:lastDesc, branch:'', notes:'', lines:[]};
-          order.push(useNum);
-        }
-        const subCode = codeOf(subC);
-        const subAcc = subCode ? accounts.find(a=>a.level==='sub' && a.code===subCode) : null;
-        const costCode = codeOf(costC);
-        const cost = costCode ? costs.find(c=>c.code===costCode) : null;
-        const dr = parseFloat(String(drC).replace(/[^\d.\-]/g,''))||0;
-        const cr = parseFloat(String(crC).replace(/[^\d.\-]/g,''))||0;
-        if(!subAcc && dr===0 && cr===0) continue;
-        grouped[useNum].lines.push({
-          accId: subAcc ? subAcc.parent : '',
-          subAccId: subAcc ? subAcc.id : '',
-          branch: cost ? cost.code : '',
-          source: '', dr, cr, note: ''
-        });
-      }
-      const entries = order.map(n=>{
-        const g = grouped[n];
-        const totalDr = g.lines.reduce((s,l)=>s+l.dr,0);
-        const totalCr = g.lines.reduce((s,l)=>s+l.cr,0);
-        return {date:g.date, desc:g.desc, branch:g.branch, notes:g.notes, lines:g.lines, totalDr, totalCr, balanced:Math.abs(totalDr-totalCr)<0.01};
-      }).filter(e=>e.date && e.desc && e.lines.length>=2);
-
-      if(!entries.length){
-        alert('⚠️ لم يتم العثور على أي قيود صالحة داخل الملف. تأكد إن أكواد الحسابات ومراكز التكلفة داخل الملف مطابقة لأكواد السيستم الحالي.');
-        return;
-      }
-      restoreImp.entries = entries;
-      restoreRenderPreview();
-    }catch(err){
-      console.error(err);
-      alert('❌ حصل خطأ في قراءة الملف: ' + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ─── قراءة ملف بصيغة البرنامج (.dsp / .json) ────────────────
-function restoreHandleJsonFile(input){
-  const file = input.files && input.files[0];
-  if(!file) return;
-  restoreImp.source = file.name;
-  document.getElementById('restore-file-name').textContent = '⏳ جارٍ قراءة: ' + file.name;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const data = JSON.parse(e.target.result);
-      let raw = null;
-      if(data && data.type==='DeepSystem_full' && Array.isArray(data.journals)) raw = data.journals;
-      else if(data && data.type==='journals' && Array.isArray(data.data)) raw = data.data;
-      else if(Array.isArray(data)) raw = data;
-      if(!raw){
-        alert('❌ الملف غير معروف أو لا يحتوي على قيود. لازم يكون ملف "حفظ بصيغة البرنامج" مُصدَّر من صفحة القيود، أو نسخة احتياطية كاملة للبرنامج.');
-        return;
-      }
-      const entries = raw.map(j=>{
-        const lines = (j.lines||[]).map(l=>({
-          accId: Number(l.accId)||'', subAccId: Number(l.subAccId)||'',
-          branch: l.branch||'', source: l.source||'',
-          dr: parseFloat(l.dr)||0, cr: parseFloat(l.cr)||0, note: l.note||''
-        }));
-        const totalDr = lines.reduce((s,l)=>s+l.dr,0);
-        const totalCr = lines.reduce((s,l)=>s+l.cr,0);
-        return {date:j.date||'', desc:j.desc||'', branch:j.branch||'', notes:j.notes||'', lines, totalDr, totalCr, balanced:Math.abs(totalDr-totalCr)<0.01};
-      }).filter(e=>e.date && e.desc && e.lines.length>=2);
-
-      if(!entries.length){
-        alert('⚠️ لا توجد قيود صالحة داخل الملف.');
-        return;
-      }
-      restoreImp.entries = entries;
-      restoreRenderPreview();
-    }catch(err){
-      alert('❌ خطأ في قراءة الملف: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-// ─── معاينة القيود + اختيار: إضافة أم استبدال ────────────────
-function restoreRenderPreview(){
-  const entries = restoreImp.entries;
-  const unbalCount = entries.filter(e=>!e.balanced).length;
-  const totalDr = entries.reduce((s,e)=>s+e.totalDr,0);
-  const totalCr = entries.reduce((s,e)=>s+e.totalCr,0);
-
-  document.getElementById('restore-body').innerHTML = `
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <div style="flex:1;min-width:120px;background:#f4f0ff;border:1.5px solid #b09af8;border-radius:10px;padding:10px 14px;text-align:center">
-        <div style="font-size:20px;font-weight:800;color:#4a1aaa">${entries.length}</div>
-        <div style="font-size:11px;color:#4a1aaa">قيد جاهز للاسترداد</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:${unbalCount?'#fff0f0':'#eafaf1'};border:1.5px solid ${unbalCount?'#f0a0a0':'#8fd9b6'};border-radius:10px;padding:10px 14px;text-align:center">
-        <div style="font-size:20px;font-weight:800;color:${unbalCount?'#b52a2a':'#0a5c3f'}">${unbalCount}</div>
-        <div style="font-size:11px;color:${unbalCount?'#b52a2a':'#0a5c3f'}">قيد غير متوازن ⚠️</div>
-      </div>
-    </div>
-
-    <div style="border:1.5px solid #b09af8;border-radius:10px;padding:14px 16px;margin-bottom:16px;background:#f4f0ff">
-      <div style="font-weight:800;color:#4a1aaa;margin-bottom:10px;font-size:13px">هتعمل إيه بالقيود دي؟</div>
-      <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer">
-        <input type="radio" name="restore-mode" value="add" checked onchange="restoreImp.mode=this.value" style="margin-top:3px">
-        <span style="font-size:12.5px;color:var(--ink2)"><b>➕ إضافة على القيود الحالية</b><br><span style="color:var(--ink3);font-size:11.5px">هيتم إضافة القيود دي للقيود الموجودة على السيستم، وأي قيد مكرر (نفس التاريخ والبيان والحسابات والمبالغ) هيتم تجاهله تلقائيًا.</span></span>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-        <input type="radio" name="restore-mode" value="replace" onchange="restoreImp.mode=this.value" style="margin-top:3px">
-        <span style="font-size:12.5px;color:var(--ink2)"><b>♻️ استبدال كل القيود الحالية</b><br><span style="color:var(--ink3);font-size:11.5px">هيتم حذف كل القيود الحالية على السيستم (غير المرحّلة) واستبدالها بالقيود المستوردة من الملف فقط.</span></span>
-      </label>
-    </div>
-
-    <div style="border:1.5px solid var(--border2);border-radius:10px;overflow:hidden">
-      <table style="font-size:12px">
-        <thead><tr style="background:var(--fog2)">
-          <th style="padding:6px 10px">التاريخ</th><th style="padding:6px 10px">البيان</th>
-          <th style="padding:6px 10px">عدد الأسطر</th>
-          <th style="padding:6px 10px">مدين</th><th style="padding:6px 10px">دائن</th><th style="padding:6px 10px">الحالة</th>
-        </tr></thead>
-        <tbody>
-          ${entries.slice(0,50).map(e=>`
-            <tr style="border-top:1px solid var(--border)">
-              <td style="padding:6px 10px">${e.date}</td>
-              <td style="padding:6px 10px">${e.desc}</td>
-              <td style="padding:6px 10px">${e.lines.length}</td>
-              <td style="padding:6px 10px;color:#0f4a8a">${e.totalDr.toLocaleString('ar-EG')}</td>
-              <td style="padding:6px 10px;color:#7a4004">${e.totalCr.toLocaleString('ar-EG')}</td>
-              <td style="padding:6px 10px">${e.balanced?'✅':'⚠️'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-      ${entries.length>50?`<div style="padding:8px;text-align:center;font-size:11px;color:var(--ink4)">... و${entries.length-50} قيد تاني</div>`:''}
-    </div>
-    <div style="margin-top:14px;font-size:12px;color:var(--ink3)">إجمالي المدين: <b>${totalDr.toLocaleString('ar-EG')}</b> — إجمالي الدائن: <b>${totalCr.toLocaleString('ar-EG')}</b></div>
-  `;
-
-  document.getElementById('restore-footer').innerHTML = `
-    <button class="btn" onclick="closeRestoreModal()">إلغاء</button>
-    <button class="btn" onclick="restoreRenderStep1()">⬅ رجوع لاختيار الملف</button>
-    <button class="btn btn-jrn" onclick="restoreConfirm()">✅ استرداد ${entries.length} قيد</button>
-  `;
-}
-
-// ─── مفتاح تكرار القيد: نفس التاريخ + البيان + أسطر الحسابات والمبالغ ──
-function _jrnDupKey(date, desc, lines){
-  const norm = (lines||[]).map(l=>[
-    l.accId||'', l.subAccId||'',
-    (parseFloat(l.dr)||0).toFixed(2), (parseFloat(l.cr)||0).toFixed(2)
-  ].join('|')).sort().join(';');
-  return `${(date||'').trim()}|${(desc||'').trim().toLowerCase()}|${norm}`;
-}
-
-function restoreConfirm(){
-  const entries = restoreImp.entries;
-  const mode = restoreImp.mode;
-
-  if(mode==='replace'){
-    const deletable = journals.filter(j=>!j.posted);
-    const postedCount = journals.length - deletable.length;
-    const msg = postedCount
-      ? '⚠️ تحذير خطير!\nسيتم حذف '+deletable.length+' قيد (غير المرحّلة) واستبدالها بالقيود المستوردة.\n'+postedCount+' قيد مرحّل هيفضل زي ما هو ومش هيتحذف.\n\nهل أنت متأكد من المتابعة؟'
-      : '⚠️ تحذير خطير جدًا!\nسيتم حذف كل القيود الحالية ('+deletable.length+' قيد) نهائيًا واستبدالها بالقيود المستوردة من الملف.\n\nهل أنت متأكد من المتابعة؟';
-    if(!confirm(msg)) return;
-    if(!confirm('تأكيد أخير: هل أنت متأكد فعلاً من استبدال كل القيود؟')) return;
-    _pushUndo('استبدال كل القيود عن طريق الاسترداد');
-    const delIds = new Set(deletable.map(j=>j.id));
-    journals = journals.filter(j=>!delIds.has(j.id));
-  } else {
-    if(!confirm('سيتم إضافة القيود المستوردة إلى القيود الحالية على السيستم (مع تجاهل أي قيد مكرر تلقائيًا). متأكد؟')) return;
-    _pushUndo('استرداد قيود جديدة');
-  }
-
-  const existingKeys = new Set(journals.map(j=>_jrnDupKey(j.date, j.desc, j.lines)));
-  let added=0, skippedDup=0;
-
-  entries.forEach(e=>{
-    const key = _jrnDupKey(e.date, e.desc, e.lines);
-    if(mode==='add' && existingKeys.has(key)){ skippedDup++; return; }
-    const jId = nextJrnId++;
-    const lines = e.lines.map(l=>({
-      id: lineIdCounter++,
-      accId: l.accId, subAccId: l.subAccId || '', branch: l.branch||'', source: l.source||'',
-      dr: l.dr, cr: l.cr, note: l.note||''
-    }));
-    journals.push({
-      id: jId, num: 'JRN-'+String(jId).padStart(4,'0'), date: e.date, branch: e.branch||'',
-      type:'قيد عادي', desc: e.desc, notes: e.notes||'', posted:false,
-      lines, attachments:[], dr: e.totalDr, cr: e.totalCr,
-      createdBy:'admin', createdAt: new Date().toISOString().split('T')[0],
-      auditTrail:[], lastEditBy:'', lastEditAt:''
-    });
-    existingKeys.add(key);
-    added++;
-  });
-
-  closeRestoreModal();
-  renderJournals();
-  saveToStorage();
-  let msg2 = mode==='replace'
-    ? '♻️ تم استبدال القيود، وإضافة '+added+' قيد من النسخة المستردة'
-    : '✅ تم استرداد '+added+' قيد بنجاح';
-  if(skippedDup) msg2 += ' — تم تجاهل '+skippedDup+' قيد مكرر';
-  showUndoToast(msg2);
 }
 
 
