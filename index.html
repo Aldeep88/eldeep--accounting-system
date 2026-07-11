@@ -55,6 +55,11 @@
   --tb-mid: #6dd6aa;
   --tb-dark: #064f36;
 
+  --ldg-hue: #0e7490;       /* حساب الأستاذ — Deep Cyan */
+  --ldg-soft: #ecfeff;
+  --ldg-mid: #67e8f9;
+  --ldg-dark: #164e63;
+
   /* ═══ Status Colors ═══ */
   --green:#0a7c55;--green-bg:#edfaf4;--green-text:#064f36;
   --amber:#b86000;--amber-bg:#fff7e6;--amber-text:#7a3e00;
@@ -350,6 +355,83 @@ body{font-family:var(--font);background:linear-gradient(135deg,#edf0fa 0%,#f4f0f
 .tb-cmp-badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle;margin-right:3px}
 .tb-cmp-badge.up{background:#e2f5eb;color:#0d4824}
 .tb-cmp-badge.dn{background:#fdeaea;color:#8c1a1a}
+
+/* ======================================================= */
+/* LEDGER (حساب الأستاذ) NAV */
+/* ======================================================= */
+.nav-item.active.ldg-active{background:rgba(14,116,144,0.30);border-color:rgba(14,116,144,0.52);color:#67e8f9}
+.nav-item.active.ldg-active .nav-badge{background:rgba(14,116,144,0.35);color:#67e8f9}
+.breadcrumb-icon.ldg{background:var(--ldg-soft);color:var(--ldg-hue)}
+.page-ledger .page-accent-bar{background:linear-gradient(90deg,var(--ldg-dark),var(--ldg-hue),var(--ldg-mid))}
+
+/* ======================================================= */
+/* LEDGER PAGE */
+/* ======================================================= */
+.ldg-flbl{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px;display:block}
+.ldg-finput{width:100%;padding:9px 13px;border:1.5px solid var(--border2);border-radius:var(--radius);font-size:13px;background:var(--fog);color:var(--ink);font-family:var(--font)}
+.ldg-finput:focus{outline:none;border-color:var(--ldg-hue);background:var(--white);box-shadow:0 0 0 3px rgba(14,116,144,0.14)}
+
+.ldg-card{background:var(--white);border-radius:var(--radius-lg);border:1.5px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+.ldg-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(135deg,var(--ldg-soft),#f0fafd);border-bottom:1.5px solid var(--ldg-mid);flex-wrap:wrap;gap:10px}
+.ldg-card-title{font-size:14px;font-weight:800;color:var(--ldg-dark)}
+.ldg-card-sub{font-size:12px;color:var(--ldg-hue);font-weight:500}
+
+.ldg-tbl-wrap{overflow:auto;max-height:calc(100vh - 340px)}
+.ldg-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.ldg-tbl thead th{
+  background:linear-gradient(135deg,var(--ldg-hue),var(--ldg-dark));
+  color:#fff;padding:11px 16px;text-align:right;
+  font-weight:700;font-size:12px;white-space:nowrap;letter-spacing:0.3px;
+  position:sticky;top:0;z-index:10;
+  box-shadow:0 3px 8px rgba(0,0,0,0.25);
+}
+.ldg-tbl thead th.num-th{text-align:left}
+.ldg-tbl tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
+.ldg-tbl tbody tr:hover{background:var(--ldg-soft)}
+.ldg-tbl tbody tr.ldg-ob-row{background:var(--fog2);font-weight:700}
+.ldg-tbl tbody tr.ldg-ob-row td{color:var(--ink2);font-size:12.5px;padding:9px 16px}
+.ldg-tbl td{padding:9px 16px;vertical-align:middle}
+.ldg-tbl td.num-td{text-align:left;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+.ldg-tbl td.dr-val{color:var(--blue-text)}
+.ldg-tbl td.cr-val{color:var(--amber-text)}
+.ldg-tbl td.bal-dr{color:var(--green);font-weight:700}
+.ldg-tbl td.bal-cr{color:var(--red);font-weight:700}
+.ldg-tbl td.zero{color:var(--ink4);font-size:12px}
+.ldg-tbl tfoot td{
+  background:linear-gradient(135deg,var(--ldg-soft),#dff4f7);
+  padding:12px 16px;font-weight:800;
+  border-top:2.5px solid var(--ldg-hue);font-size:13.5px
+}
+.ldg-tbl tfoot td.num-td{text-align:left}
+
+.ldg-code-pill{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;background:var(--ldg-soft);color:var(--ldg-dark);border:1px solid var(--ldg-mid);white-space:nowrap}
+.ldg-empty{text-align:center;padding:60px 20px;color:var(--ink3)}
+.ldg-empty .icon{font-size:48px;margin-bottom:12px}
+.ldg-empty p{font-size:15px;font-weight:600;margin-bottom:6px}
+.ldg-empty .hint{font-size:12px;color:var(--ink4)}
+
+.btn-ldg{background:var(--ldg-hue);color:#fff;border-color:var(--ldg-hue)}
+.btn-ldg:hover{background:var(--ldg-dark);border-color:var(--ldg-dark)}
+
+/* Quick period buttons */
+.ldg-qbtn{
+  padding:4px 11px;border-radius:20px;border:1.5px solid var(--ldg-mid);
+  background:var(--white);color:var(--ldg-dark);font-family:inherit;font-size:11.5px;
+  font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap
+}
+.ldg-qbtn:hover{background:var(--ldg-soft);border-color:var(--ldg-hue)}
+.ldg-qbtn.active{background:var(--ldg-hue);color:#fff;border-color:var(--ldg-dark);box-shadow:0 2px 8px rgba(14,116,144,0.30)}
+
+.ldg-balance-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700}
+.ldg-balance-badge.dr{background:var(--blue-bg);color:var(--blue-text)}
+.ldg-balance-badge.cr{background:var(--red-bg);color:var(--red-text)}
+.ldg-balance-badge.zero{background:var(--fog2);color:var(--ink3)}
+
+.ldg-acc-picker{min-width:260px;flex:1}
+.ldg-acc-hdr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ldg-acc-hdr .nat-pill{font-size:11px;padding:2px 10px;border-radius:12px;font-weight:700}
+.ldg-acc-hdr .nat-pill.dr{background:var(--blue-bg);color:var(--blue-text)}
+.ldg-acc-hdr .nat-pill.cr{background:var(--amber-bg);color:var(--amber-text)}
 
 /* Export buttons */
 .btn-excel{background:#1d6f42;color:#fff;border-color:#1d6f42}
@@ -1018,6 +1100,11 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
     <span class="nav-label">ميزان المراجعة</span>
     <span class="nav-badge" id="nb-tb">—</span>
   </div>
+  <div class="nav-item" onclick="showPage('ledger')" id="tab-ledger">
+    <span class="nav-icon">📘</span>
+    <span class="nav-label">حساب الأستاذ</span>
+    <span class="nav-badge" id="nb-ledger">—</span>
+  </div>
   <div class="nav-item" onclick="showPage('accounts')" id="tab-accounts">
     <span class="nav-icon">🌳</span>
     <span class="nav-label">شجرة الحسابات</span>
@@ -1384,6 +1471,92 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
               <div class="icon">⚖️</div>
               <p>اضغط «تحديث» لعرض الميزان</p>
               <div class="hint">سيتم احتساب أرصدة جميع الحسابات تلقائياً</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ======== GENERAL LEDGER PAGE (حساب الأستاذ) ======== -->
+<div class="page page-ledger" id="page-ledger">
+  <div class="page-accent-bar"></div>
+  <div class="page-content">
+
+    <!-- فلاتر ثابتة فوق -->
+    <div style="background:var(--white);border-bottom:1px solid var(--border);padding:14px 24px;flex-shrink:0">
+
+      <!-- أزرار الفترات السريعة -->
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--ldg-hue);margin-left:6px">⚡ فترة سريعة:</span>
+        <button class="ldg-qbtn" id="ldg-qbtn-today"    onclick="ldg_setQuick('today')">اليوم</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-week"     onclick="ldg_setQuick('week')">هذا الأسبوع</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-month"    onclick="ldg_setQuick('month')">هذا الشهر</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-lastmonth" onclick="ldg_setQuick('lastmonth')">الشهر الماضي</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-q1"       onclick="ldg_setQuick('q1')">ر1</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-q2"       onclick="ldg_setQuick('q2')">ر2</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-q3"       onclick="ldg_setQuick('q3')">ر3</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-q4"       onclick="ldg_setQuick('q4')">ر4</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-year"     onclick="ldg_setQuick('year')">هذه السنة</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-lastyear" onclick="ldg_setQuick('lastyear')">السنة الماضية</button>
+        <button class="ldg-qbtn" id="ldg-qbtn-all"      onclick="ldg_setQuick('all')">كل الفترات</button>
+      </div>
+
+      <!-- الفلاتر الأساسية -->
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+        <div class="ldg-acc-picker">
+          <span class="ldg-flbl">📘 الحساب</span>
+          <select id="ldg-acc" class="ldg-finput" onchange="renderLedger()">
+            <option value="">— اختر حساباً —</option>
+          </select>
+        </div>
+        <div>
+          <span class="ldg-flbl">📅 من تاريخ</span>
+          <input type="date" id="ldg-from" class="ldg-finput" style="width:155px" onchange="ldg_clearQuickActive();renderLedger()">
+        </div>
+        <div>
+          <span class="ldg-flbl">📅 إلى تاريخ</span>
+          <input type="date" id="ldg-to" class="ldg-finput" style="width:155px" onchange="ldg_clearQuickActive();renderLedger()">
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;font-weight:700;color:var(--ldg-dark)">
+            <input type="checkbox" id="ldg-posted-only" onchange="renderLedger()" style="accent-color:var(--ldg-hue)">
+            ✅ المرحّل فقط
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-ldg" onclick="renderLedger()">🔄 تحديث</button>
+          <button class="btn" onclick="ldg_clearFilters()">✕ مسح</button>
+          <button class="btn btn-sm" onclick="ldg_printPDF()" style="color:var(--red);border-color:#f0a0a0">📄 PDF</button>
+          <button class="btn btn-sm" onclick="exportExcel_ldg()" style="color:var(--ldg-hue);border-color:var(--ldg-mid)">📊 Excel</button>
+        </div>
+        <div style="margin-right:auto;display:flex;align-items:center;gap:12px">
+          <span id="ldg-balance-badge"></span>
+          <span id="ldg-stats-inline" style="font-size:12px;color:var(--ink3)"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- المحتوى القابل للتمرير -->
+    <div style="flex:1;overflow:visible;padding:20px 24px">
+
+      <!-- جدول حساب الأستاذ -->
+      <div class="ldg-card">
+        <div class="ldg-card-head">
+          <div>
+            <div class="ldg-card-title" id="ldg-card-title">📘 حساب الأستاذ</div>
+            <div class="ldg-card-sub" id="ldg-period-label">اختر حساباً لعرض كشف الحركة</div>
+          </div>
+          <div class="ldg-acc-hdr" id="ldg-acc-hdr"></div>
+        </div>
+        <div class="ldg-tbl-wrap">
+          <div id="ldg-result-area">
+            <div class="ldg-empty">
+              <div class="icon">📘</div>
+              <p>اختر حساباً من القائمة أعلاه</p>
+              <div class="hint">سيظهر كشف حركة تفصيلي مع الرصيد المتحرك بعد كل عملية</div>
             </div>
           </div>
         </div>
@@ -2839,15 +3012,20 @@ const pageConfig = {
       <button class="btn btn-tb" onclick="tb_printPDF()">📄 PDF</button>
       <button class="btn btn-excel" onclick="exportExcel_tb()" title="تصدير Excel">📊 Excel</button>
     </div>`},
+  ledger:{icon:'📘',iconClass:'ldg',title:'حساب الأستاذ',sub:'كشف حركة تفصيلي لكل حساب مع الرصيد المتحرك',navClass:'ldg-active',btn:`
+    <div class="export-group">
+      <button class="btn btn-ldg" onclick="ldg_printPDF()">📄 PDF</button>
+      <button class="btn btn-excel" onclick="exportExcel_ldg()" title="تصدير Excel">📊 Excel</button>
+    </div>`},
 };
 
 function showPage(page){
-  ['accounts','costs','journals','reports','tb'].forEach(p=>{
+  ['accounts','costs','journals','reports','tb','ledger'].forEach(p=>{
     const el=document.getElementById('page-'+p);
     if(el) el.classList.remove('active');
   });
   document.querySelectorAll('.nav-item').forEach(t=>{
-    t.classList.remove('active','acc-active','cost-active','jrn-active','rpt-active','tb-active');
+    t.classList.remove('active','acc-active','cost-active','jrn-active','rpt-active','tb-active','ldg-active');
   });
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
@@ -2864,6 +3042,7 @@ function showPage(page){
   if(page==='journals') renderJournals();
   if(page==='reports') rpt_init();
   if(page==='tb') renderTB();
+  if(page==='ledger'){ ldg_populateAccounts(); renderLedger(); }
 }
 
 // ============================================================
@@ -3430,6 +3609,7 @@ function renderMainNode(a,q,cat,lst){
         <span class="pill pill-cat">${a.cat}</span>
       </div>
       <div class="node-actions" onclick="event.stopPropagation()">
+        <button class="btn-icon" title="حساب الأستاذ" onclick="openLedger(${a.id})" style="color:var(--ldg-hue)">📘</button>
         <button class="btn-icon" title="إضافة فرعي" onclick="accModal(${a.id})" style="color:var(--acc-hue)">＋</button>
         <button class="btn-icon" title="تعديل" onclick="editAcc(${a.id})">✎</button>
         <button class="btn-icon" title="حذف" onclick="deleteAcc(${a.id})" style="color:var(--red)">✕</button>
@@ -3451,6 +3631,7 @@ function renderSubNode(a){
         <span class="pill pill-cat">${a.cat}</span>
       </div>
       <div class="node-actions">
+        <button class="btn-icon" title="حساب الأستاذ" onclick="openLedger(${a.id})" style="color:var(--ldg-hue)">📘</button>
         <button class="btn-icon" title="تعديل" onclick="editAcc(${a.id})">✎</button>
         <button class="btn-icon" title="حذف" onclick="deleteAcc(${a.id})" style="color:var(--red)">✕</button>
       </div>
@@ -6131,7 +6312,7 @@ function renderTB(){
     </tr>`;
     const sr=r.subs.map(s=>`<tr style="opacity:${s.hasMovement?1:0.45}">
       <td style="padding-right:32px"><span class="tb-code-pill" style="font-size:10.5px">${s.sub.code}</span></td>
-      <td style="font-size:13px">${s.sub.name} <span style="font-size:10px;color:var(--ink4);margin-right:4px">${s.sub.nature==='مدين'?'(م)':'(د)'}</span>${s.hasOB?'<span style="font-size:10px;background:var(--amber-bg);color:var(--amber-text);padding:1px 5px;border-radius:4px;margin-right:3px" title="يوجد رصيد افتتاحي">ر.ا</span>':''}</td>
+      <td style="font-size:13px"><span style="cursor:pointer" title="فتح حساب الأستاذ" onclick="openLedger(${s.sub.id})">${s.sub.name}</span> <span style="font-size:10px;color:var(--ink4);margin-right:4px">${s.sub.nature==='مدين'?'(م)':'(د)'}</span>${s.hasOB?'<span style="font-size:10px;background:var(--amber-bg);color:var(--amber-text);padding:1px 5px;border-radius:4px;margin-right:3px" title="يوجد رصيد افتتاحي">ر.ا</span>':''} <button class="btn-icon" title="حساب الأستاذ" onclick="openLedger(${s.sub.id})" style="color:var(--ldg-hue);width:22px;height:22px;font-size:11px;vertical-align:middle">📘</button></td>
       <td class="num-td dr-val">${s.dr?tb_fmt(s.dr):'<span class="zero">—</span>'}</td>
       <td class="num-td cr-val">${s.cr?tb_fmt(s.cr):'<span class="zero">—</span>'}</td>
       <td class="num-td bal-dr">${s.balDr?tb_fmt(s.balDr):'<span class="zero">—</span>'}</td>
@@ -6284,6 +6465,403 @@ function tb_printPDF(){
   </div>
   <div class="page-footer">${getSysName()} — ميزان المراجعة — ${new Date().toLocaleDateString('ar-EG')}</div>
   `);
+}
+
+/* ============================================================
+   حساب الأستاذ (GENERAL LEDGER)
+   ============================================================ */
+
+// يملأ قائمة اختيار الحساب بكل الحسابات الرئيسية والفرعية
+function ldg_populateAccounts(){
+  const sel=document.getElementById('ldg-acc');
+  if(!sel)return;
+  const prevVal=sel.value;
+  const mains=accounts.filter(a=>a.level==='main').sort((a,b)=>a.code.localeCompare(b.code,'ar',{numeric:true}));
+  let html='<option value="">— اختر حساباً —</option>';
+  mains.forEach(main=>{
+    const subs=accounts.filter(a=>a.parent===main.id).sort((a,b)=>a.code.localeCompare(b.code,'ar',{numeric:true}));
+    html+=`<optgroup label="${main.code} — ${main.name}">`;
+    html+=`<option value="${main.id}">📁 ${main.code} — ${main.name} (كل الحساب)</option>`;
+    subs.forEach(s=>{
+      html+=`<option value="${s.id}">${s.code} — ${s.name}</option>`;
+    });
+    html+='</optgroup>';
+  });
+  sel.innerHTML=html;
+  if(prevVal && [...sel.options].some(o=>o.value===prevVal)) sel.value=prevVal;
+  document.getElementById('nb-ledger').textContent=accounts.filter(a=>a.level==='sub').length;
+}
+
+// ينقل المستخدم لصفحة حساب الأستاذ محملاً على حساب معين (من ميزان المراجعة أو شجرة الحسابات)
+function openLedger(accId){
+  showPage('ledger');
+  const sel=document.getElementById('ldg-acc');
+  if(sel){ sel.value=String(accId); }
+  renderLedger();
+}
+
+function ldg_clearQuickActive(){
+  document.querySelectorAll('.ldg-qbtn').forEach(b=>b.classList.remove('active'));
+}
+
+function ldg_setQuick(key){
+  const today=new Date();
+  const y=today.getFullYear();
+  const m=today.getMonth();
+  let from='',to='';
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=(d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  if(key==='today'){
+    from=to=fmt(today);
+  } else if(key==='week'){
+    const dow=today.getDay();
+    const sat=new Date(today); sat.setDate(today.getDate()-((dow+1)%7));
+    const fri=new Date(sat); fri.setDate(sat.getDate()+6);
+    from=fmt(sat);to=fmt(fri);
+  } else if(key==='month'){
+    from=`${y}-${pad(m+1)}-01`;
+    to=fmt(new Date(y,m+1,0));
+  } else if(key==='lastmonth'){
+    from=`${m===0?y-1:y}-${pad(m===0?12:m)}-01`;
+    to=fmt(new Date(y,m,0));
+  } else if(key==='q1'){from=`${y}-01-01`;to=`${y}-03-31`;}
+  else if(key==='q2'){from=`${y}-04-01`;to=`${y}-06-30`;}
+  else if(key==='q3'){from=`${y}-07-01`;to=`${y}-09-30`;}
+  else if(key==='q4'){from=`${y}-10-01`;to=`${y}-12-31`;}
+  else if(key==='year'){from=`${y}-01-01`;to=`${y}-12-31`;}
+  else if(key==='lastyear'){from=`${y-1}-01-01`;to=`${y-1}-12-31`;}
+  else if(key==='all'){from='';to='';}
+  document.getElementById('ldg-from').value=from;
+  document.getElementById('ldg-to').value=to;
+  ldg_clearQuickActive();
+  const btn=document.getElementById('ldg-qbtn-'+key);
+  if(btn)btn.classList.add('active');
+  renderLedger();
+}
+
+function ldg_clearFilters(){
+  document.getElementById('ldg-from').value='';
+  document.getElementById('ldg-to').value='';
+  document.getElementById('ldg-posted-only').checked=false;
+  ldg_clearQuickActive();
+  renderLedger();
+}
+
+// المنطق الأساسي لحساب حركة الحساب والرصيد المتحرك — تُستخدم في العرض والطباعة والتصدير
+function ldg_computeData(accId, fromVal, toVal, postedOnly){
+  const acc=accounts.find(a=>a.id===accId);
+  if(!acc) return null;
+  const isMain=acc.level==='main';
+  const subIds=isMain?accounts.filter(a=>a.parent===acc.id).map(a=>a.id):[accId];
+
+  let obDr=0,obCr=0;
+  subIds.forEach(sid=>{
+    const ob=openingBalances[sid]||{dr:0,cr:0};
+    obDr+=ob.dr||0; obCr+=ob.cr||0;
+  });
+
+  const filteredJournals=journals.filter(j=>{
+    if(fromVal&&j.date<fromVal)return false;
+    if(toVal&&j.date>toVal)return false;
+    if(postedOnly&&!j.posted)return false;
+    return true;
+  });
+
+  let entries=[];
+  filteredJournals.forEach(j=>{
+    j.lines.forEach(l=>{
+      if(subIds.includes(l.subAccId)){
+        entries.push({date:j.date,num:j.num,desc:j.desc,branch:l.branch||'',source:l.source||'',dr:l.dr||0,cr:l.cr||0,posted:!!j.posted});
+      }
+    });
+  });
+  entries.sort((a,b)=>{
+    if(a.date!==b.date) return a.date<b.date?-1:1;
+    return String(a.num||'').localeCompare(String(b.num||''),'ar',{numeric:true});
+  });
+
+  let running=obDr-obCr, totalDr=0, totalCr=0;
+  const rows=entries.map(e=>{
+    running+=e.dr-e.cr;
+    totalDr+=e.dr; totalCr+=e.cr;
+    return {...e, running};
+  });
+
+  return {acc,isMain,obDr,obCr,rows,totalDr,totalCr,closing:running,journalsCount:filteredJournals.length};
+}
+
+function ldg_periodLabel(fromVal,toVal){
+  return fromVal||toVal
+    ?`${fromVal?new Date(fromVal).toLocaleDateString('ar-EG'):'من البداية'} — ${toVal?new Date(toVal).toLocaleDateString('ar-EG'):'حتى الآن'}`
+    :'كل الفترات';
+}
+
+function ldg_balCellHtml(bal, drCls, crCls){
+  if(Math.abs(bal)<0.005) return `<td class="num-td zero">—</td><td class="num-td zero">—</td>`;
+  return bal>0
+    ? `<td class="num-td ${drCls}">${tb_fmt(bal)}</td><td class="num-td zero">—</td>`
+    : `<td class="num-td zero">—</td><td class="num-td ${crCls}">${tb_fmt(Math.abs(bal))}</td>`;
+}
+
+function renderLedger(){
+  const sel=document.getElementById('ldg-acc');
+  if(!sel)return;
+  const val=sel.value;
+  const fromVal=document.getElementById('ldg-from').value;
+  const toVal=document.getElementById('ldg-to').value;
+  const postedOnly=document.getElementById('ldg-posted-only').checked;
+
+  if(!val){
+    document.getElementById('ldg-card-title').textContent='📘 حساب الأستاذ';
+    document.getElementById('ldg-period-label').textContent='اختر حساباً لعرض كشف الحركة';
+    document.getElementById('ldg-acc-hdr').innerHTML='';
+    document.getElementById('ldg-balance-badge').innerHTML='';
+    document.getElementById('ldg-stats-inline').innerHTML='';
+    document.getElementById('ldg-result-area').innerHTML=`<div class="ldg-empty"><div class="icon">📘</div><p>اختر حساباً من القائمة أعلاه</p><div class="hint">سيظهر كشف حركة تفصيلي مع الرصيد المتحرك بعد كل عملية</div></div>`;
+    return;
+  }
+
+  const data=ldg_computeData(parseInt(val), fromVal, toVal, postedOnly);
+  if(!data)return;
+  const {acc,isMain,obDr,obCr,rows,totalDr,totalCr,closing,journalsCount}=data;
+
+  document.getElementById('ldg-card-title').textContent=`📘 ${acc.code} — ${acc.name}`;
+  document.getElementById('ldg-period-label').textContent=ldg_periodLabel(fromVal,toVal);
+  document.getElementById('ldg-acc-hdr').innerHTML=`
+    <span class="nat-pill ${acc.nature==='مدين'?'dr':'cr'}">${acc.nature==='مدين'?'📥':'📤'} طبيعة الحساب: ${acc.nature}</span>
+    <span class="nat-pill dr">${acc.list}</span>
+    ${isMain?'<span class="nat-pill cr">📁 إجمالي كل الفروع</span>':''}`;
+
+  const isDr=closing>=0;
+  document.getElementById('ldg-balance-badge').innerHTML=
+    `<span class="ldg-balance-badge ${Math.abs(closing)<0.005?'zero':(isDr?'dr':'cr')}">${Math.abs(closing)<0.005?'⚖️ رصيد صفري':(isDr?'📥 رصيد مدين: '+tb_fmt(Math.abs(closing)):'📤 رصيد دائن: '+tb_fmt(Math.abs(closing)))}</span>`;
+  document.getElementById('ldg-stats-inline').innerHTML=
+    `<span style="margin-left:12px">📒 قيود: <b>${journalsCount}</b></span>`+
+    `<span style="margin-left:12px">🔗 حركات: <b>${rows.length}</b></span>`+
+    `<span style="margin-left:12px">📥 مدين: <b style="color:var(--blue-text)">${tb_fmt(totalDr)}</b></span>`+
+    `<span style="margin-left:12px">📤 دائن: <b style="color:var(--amber-text)">${tb_fmt(totalCr)}</b></span>`;
+
+  if(!rows.length && obDr===0 && obCr===0){
+    document.getElementById('ldg-result-area').innerHTML=`<div class="ldg-empty"><div class="icon">🔍</div><p>لا توجد حركات لهذا الحساب خلال الفترة المحددة</p></div>`;
+    return;
+  }
+
+  const obRow=`<tr class="ldg-ob-row">
+    <td>—</td>
+    <td><span class="ldg-code-pill">افتتاحي</span></td>
+    <td>رصيد أول المدة</td>
+    <td>—</td>
+    <td class="num-td dr-val">${obDr?tb_fmt(obDr):'<span class="zero">—</span>'}</td>
+    <td class="num-td cr-val">${obCr?tb_fmt(obCr):'<span class="zero">—</span>'}</td>
+    ${ldg_balCellHtml(obDr-obCr,'bal-dr','bal-cr')}
+  </tr>`;
+
+  const bodyRows=rows.map(r=>`<tr>
+    <td style="white-space:nowrap;font-size:12px">${fmtDate(r.date)}</td>
+    <td><span class="ldg-code-pill">${r.num}</span>${r.posted?' <span title="مرحّل" style="color:var(--green)">✅</span>':''}</td>
+    <td style="font-size:13px">${r.desc||''}${r.source?` <span style="color:var(--ink4);font-size:11px">(${r.source})</span>`:''}</td>
+    <td style="font-size:11.5px;color:var(--ink3)">${r.branch||'—'}</td>
+    <td class="num-td dr-val">${r.dr?tb_fmt(r.dr):'<span class="zero">—</span>'}</td>
+    <td class="num-td cr-val">${r.cr?tb_fmt(r.cr):'<span class="zero">—</span>'}</td>
+    ${ldg_balCellHtml(r.running,'bal-dr','bal-cr')}
+  </tr>`).join('');
+
+  document.getElementById('ldg-result-area').innerHTML=`
+    <table class="ldg-tbl">
+      <thead><tr>
+        <th style="width:95px">التاريخ</th>
+        <th style="width:110px">رقم القيد</th>
+        <th>البيان</th>
+        <th style="width:120px">مركز التكلفة</th>
+        <th class="num-th" style="width:120px">مدين</th>
+        <th class="num-th" style="width:120px">دائن</th>
+        <th class="num-th" style="width:120px">رصيد مدين</th>
+        <th class="num-th" style="width:120px">رصيد دائن</th>
+      </tr></thead>
+      <tbody>${obRow}${bodyRows}</tbody>
+      <tfoot><tr>
+        <td colspan="4" style="font-size:14px;color:var(--ldg-dark)">📊 الإجمالي / الرصيد الختامي</td>
+        <td class="num-td" style="color:var(--blue-text)">${tb_fmt(totalDr)}</td>
+        <td class="num-td" style="color:var(--amber-text)">${tb_fmt(totalCr)}</td>
+        ${ldg_balCellHtml(closing,'bal-dr','bal-cr')}
+      </tr></tfoot>
+    </table>`;
+}
+
+function ldg_printPDF(){
+  const sel=document.getElementById('ldg-acc');
+  const val=sel?sel.value:'';
+  if(!val){ alert('الرجاء اختيار حساب أولاً'); return; }
+  const fromVal=document.getElementById('ldg-from').value;
+  const toVal=document.getElementById('ldg-to').value;
+  const postedOnly=document.getElementById('ldg-posted-only').checked;
+  const data=ldg_computeData(parseInt(val), fromVal, toVal, postedOnly);
+  if(!data)return;
+  const {acc,obDr,obCr,rows,totalDr,totalCr,closing,journalsCount}=data;
+  const period=ldg_periodLabel(fromVal,toVal);
+  const isDr=closing>=0;
+
+  const obRow=`<tr style="background:linear-gradient(135deg,#ecfeff,#d3f4f8)">
+    <td style="padding:8px 12px;font-size:12px;border-bottom:1.5px solid #67e8f9">—</td>
+    <td style="padding:8px 12px;font-weight:800;font-size:12px;color:#164e63;border-bottom:1.5px solid #67e8f9">افتتاحي</td>
+    <td style="padding:8px 12px;font-weight:700;font-size:12px;color:#164e63;border-bottom:1.5px solid #67e8f9">رصيد أول المدة</td>
+    <td style="padding:8px 12px;font-size:12px;border-bottom:1.5px solid #67e8f9">—</td>
+    <td style="text-align:left;padding:8px 12px;color:#0f4a8a;font-weight:700;font-size:12px;border-bottom:1.5px solid #67e8f9">${obDr?tb_fmt(obDr):'—'}</td>
+    <td style="text-align:left;padding:8px 12px;color:#7a4004;font-weight:700;font-size:12px;border-bottom:1.5px solid #67e8f9">${obCr?tb_fmt(obCr):'—'}</td>
+    <td style="text-align:left;padding:8px 12px;color:#156a38;font-weight:800;font-size:12px;border-bottom:1.5px solid #67e8f9">${(obDr-obCr)>0?tb_fmt(obDr-obCr):'—'}</td>
+    <td style="text-align:left;padding:8px 12px;color:#b52a2a;font-weight:800;font-size:12px;border-bottom:1.5px solid #67e8f9">${(obDr-obCr)<0?tb_fmt(Math.abs(obDr-obCr)):'—'}</td>
+  </tr>`;
+
+  const bodyHtml=rows.map((r,i)=>`<tr style="background:${i%2===0?'#fff':'#f5fbfd'}">
+    <td style="padding:7px 12px;font-size:11.5px;border-bottom:1px solid #e0f4f8">${fmtDate(r.date)}</td>
+    <td style="padding:7px 12px;font-size:11.5px;font-weight:700;color:#0e7490;border-bottom:1px solid #e0f4f8">${r.num}</td>
+    <td style="padding:7px 12px;font-size:12px;border-bottom:1px solid #e0f4f8">${r.desc||''}</td>
+    <td style="padding:7px 12px;font-size:11px;color:#6b7f96;border-bottom:1px solid #e0f4f8">${r.branch||'—'}</td>
+    <td style="text-align:left;padding:7px 12px;color:#0f4a8a;font-weight:700;font-size:12px;border-bottom:1px solid #e0f4f8">${r.dr?tb_fmt(r.dr):'—'}</td>
+    <td style="text-align:left;padding:7px 12px;color:#7a4004;font-weight:700;font-size:12px;border-bottom:1px solid #e0f4f8">${r.cr?tb_fmt(r.cr):'—'}</td>
+    <td style="text-align:left;padding:7px 12px;color:#156a38;font-weight:800;font-size:12px;border-bottom:1px solid #e0f4f8">${r.running>0?tb_fmt(r.running):'—'}</td>
+    <td style="text-align:left;padding:7px 12px;color:#b52a2a;font-weight:800;font-size:12px;border-bottom:1px solid #e0f4f8">${r.running<0?tb_fmt(Math.abs(r.running)):'—'}</td>
+  </tr>`).join('');
+
+  showPrintOverlay(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <title>حساب الأستاذ — ${acc.name}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Cairo',sans-serif;background:#f0f4f8;color:#0f1923;padding:24px;font-size:13px}
+    .page-hdr{background:linear-gradient(135deg,#0e7490,#164e63);color:#fff;padding:20px 28px;border-radius:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+    .page-hdr-title{font-size:22px;font-weight:800}
+    .page-hdr-sub{font-size:12px;opacity:0.8;margin-top:4px}
+    .page-hdr-right{text-align:left}
+    .bal-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:800}
+    .bal-dr{background:#eef4ff;color:#1039a0}.bal-cr{background:#fdeaea;color:#8c1a1a}
+    .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+    .kpi{background:#fff;border-radius:12px;padding:14px 18px;border:1.5px solid #dce6f0;position:relative;overflow:hidden}
+    .kpi::before{content:'';position:absolute;top:0;right:0;width:4px;height:100%}
+    .kpi.teal::before{background:#0e7490}.kpi.blue::before{background:#1a6bba}.kpi.amber::before{background:#9a5a06}.kpi.green::before{background:#156a38}
+    .kpi .lbl{font-size:10.5px;color:#6b7f96;font-weight:700;margin-bottom:4px}
+    .kpi .val{font-size:18px;font-weight:800}
+    .kpi.teal .val{color:#0e7490}.kpi.blue .val{color:#1a6bba}.kpi.amber .val{color:#9a5a06}.kpi.green .val{color:#156a38}
+    .tbl-card{background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid #dce6f0;box-shadow:0 2px 8px rgba(15,25,35,0.06)}
+    .tbl-card-hdr{background:linear-gradient(135deg,#ecfeff,#f0fafd);padding:12px 18px;border-bottom:1.5px solid #67e8f9;display:flex;justify-content:space-between;align-items:center}
+    .tbl-card-title{font-size:14px;font-weight:800;color:#164e63}
+    table{width:100%;border-collapse:collapse;font-size:12.5px}
+    thead th{background:linear-gradient(135deg,#0e7490,#164e63);color:#fff;padding:10px 12px;text-align:right;font-weight:800;font-size:12px;white-space:nowrap}
+    thead th:nth-child(n+5){text-align:left}
+    tfoot td{background:linear-gradient(135deg,#ecfeff,#d3f4f8);padding:11px 12px;font-weight:800;border-top:2.5px solid #0e7490;font-size:13px}
+    tfoot td:nth-child(n+5){text-align:left}
+    .page-footer{text-align:center;margin-top:20px;padding-top:14px;border-top:1px solid #dce6f0;font-size:11px;color:#a8b8ca}
+    @media print{body{background:#fff;padding:12px}tr{break-inside:avoid}}
+  </style></head><body>
+  <div class="page-hdr">
+    <div>
+      <div class="page-hdr-title">📘 حساب الأستاذ — ${acc.code} ${acc.name}</div>
+      <div class="page-hdr-sub">الفترة: ${period} | تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</div>
+    </div>
+    <div class="page-hdr-right">
+      <span class="bal-badge ${isDr?'bal-dr':'bal-cr'}">${isDr?'📥 رصيد مدين':'📤 رصيد دائن'}: ${tb_fmt(Math.abs(closing))}</span>
+      <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px;text-align:left">${getSysName()}</div>
+    </div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi teal"><div class="lbl">القيود المحسوبة</div><div class="val">${journalsCount}</div></div>
+    <div class="kpi blue"><div class="lbl">إجمالي المدين</div><div class="val">${tb_fmt(totalDr)}</div></div>
+    <div class="kpi amber"><div class="lbl">إجمالي الدائن</div><div class="val">${tb_fmt(totalCr)}</div></div>
+    <div class="kpi green"><div class="lbl">عدد الحركات</div><div class="val">${rows.length}</div></div>
+  </div>
+  <div class="tbl-card">
+    <div class="tbl-card-hdr">
+      <div class="tbl-card-title">📋 كشف حركة الحساب</div>
+      <div style="font-size:12px;color:#6b7f96;font-weight:600">الفترة: ${period}</div>
+    </div>
+    <table><thead><tr>
+      <th style="width:90px">التاريخ</th><th style="width:100px">رقم القيد</th><th>البيان</th><th style="width:110px">مركز التكلفة</th>
+      <th style="width:110px">مدين</th><th style="width:110px">دائن</th>
+      <th style="width:110px">رصيد مدين</th><th style="width:110px">رصيد دائن</th>
+    </tr></thead>
+    <tbody>${obRow}${bodyHtml}</tbody>
+    <tfoot><tr>
+      <td colspan="4" style="color:#164e63;font-size:13.5px">📊 الإجمالي / الرصيد الختامي</td>
+      <td style="text-align:left;color:#0f4a8a">${tb_fmt(totalDr)}</td>
+      <td style="text-align:left;color:#7a4004">${tb_fmt(totalCr)}</td>
+      <td style="text-align:left;color:#156a38">${closing>0?tb_fmt(closing):'—'}</td>
+      <td style="text-align:left;color:#b52a2a">${closing<0?tb_fmt(Math.abs(closing)):'—'}</td>
+    </tr></tfoot></table>
+  </div>
+  <div class="page-footer">${getSysName()} — حساب الأستاذ: ${acc.name} — ${new Date().toLocaleDateString('ar-EG')}</div>
+  `);
+}
+
+function exportExcel_ldg(){
+  const sel=document.getElementById('ldg-acc');
+  const val=sel?sel.value:'';
+  if(!val){ alert('الرجاء اختيار حساب أولاً'); return; }
+  const fromVal=document.getElementById('ldg-from').value;
+  const toVal=document.getElementById('ldg-to').value;
+  const postedOnly=document.getElementById('ldg-posted-only').checked;
+  const data=ldg_computeData(parseInt(val), fromVal, toVal, postedOnly);
+  if(!data)return;
+  const {acc,obDr,obCr,rows,totalDr,totalCr,closing}=data;
+  const period=ldg_periodLabel(fromVal,toVal);
+  const isBal=Math.abs(closing)<0.005;
+
+  const obRowHtml=`<tr>
+    <td style="background:#dff4f7;padding:8px 12px;font-weight:800">—</td>
+    <td style="background:#dff4f7;padding:8px 12px;font-weight:800">افتتاحي</td>
+    <td style="background:#dff4f7;padding:8px 12px;font-weight:800">رصيد أول المدة</td>
+    <td style="background:#dff4f7;padding:8px 12px">—</td>
+    <td style="background:#dff4f7;text-align:left;padding:8px 12px;color:#0f4a8a;font-weight:800">${obDr?tb_fmt(obDr):'—'}</td>
+    <td style="background:#dff4f7;text-align:left;padding:8px 12px;color:#7a4004;font-weight:800">${obCr?tb_fmt(obCr):'—'}</td>
+    <td style="background:#dff4f7;text-align:left;padding:8px 12px;color:#156a38;font-weight:800">${(obDr-obCr)>0?tb_fmt(obDr-obCr):'—'}</td>
+    <td style="background:#dff4f7;text-align:left;padding:8px 12px;color:#b52a2a;font-weight:800">${(obDr-obCr)<0?tb_fmt(Math.abs(obDr-obCr)):'—'}</td>
+  </tr>`;
+
+  const bodyHtml=rows.map((r,i)=>`<tr>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};padding:7px 12px;border-bottom:1px solid #e0f4f8">${fmtDate(r.date)}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};padding:7px 12px;font-weight:700;color:#0e7490;border-bottom:1px solid #e0f4f8">${r.num}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};padding:7px 12px;border-bottom:1px solid #e0f4f8">${r.desc||''}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};padding:7px 12px;border-bottom:1px solid #e0f4f8">${r.branch||'—'}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};text-align:left;padding:7px 12px;color:#0f4a8a;font-weight:700;border-bottom:1px solid #e0f4f8">${r.dr?tb_fmt(r.dr):'—'}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};text-align:left;padding:7px 12px;color:#7a4004;font-weight:700;border-bottom:1px solid #e0f4f8">${r.cr?tb_fmt(r.cr):'—'}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};text-align:left;padding:7px 12px;color:#156a38;font-weight:800;border-bottom:1px solid #e0f4f8">${r.running>0?tb_fmt(r.running):'—'}</td>
+    <td style="background:${i%2===0?'#fff':'#f5fbfd'};text-align:left;padding:7px 12px;color:#b52a2a;font-weight:800;border-bottom:1px solid #e0f4f8">${r.running<0?tb_fmt(Math.abs(r.running)):'—'}</td>
+  </tr>`).join('');
+
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>حساب الأستاذ</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+  <style>body{font-family:Cairo,Arial,sans-serif;direction:rtl}table{border-collapse:collapse;width:100%}</style>
+  </head><body>
+  <table>
+    <tr><td colspan="8" style="background:linear-gradient(135deg,#0e7490,#164e63);color:#fff;padding:16px 20px;font-size:18px;font-weight:800;font-family:Cairo,Arial">📘 حساب الأستاذ — ${acc.code} ${acc.name} — ${getSysName()}</td></tr>
+    <tr><td colspan="8" style="background:#ecfeff;padding:8px 16px;color:#164e63;font-size:12px;font-weight:600">الفترة: ${period} | ${new Date().toLocaleDateString('ar-EG')} | ${isBal?'⚖️ رصيد صفري':(closing>0?'📥 رصيد مدين':'📤 رصيد دائن')}: ${tb_fmt(Math.abs(closing))} | المدين: ${tb_fmt(totalDr)} | الدائن: ${tb_fmt(totalCr)}</td></tr>
+    <tr style="height:8px"><td colspan="8"></td></tr>
+    <tr>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">التاريخ</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">رقم القيد</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">البيان</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">مركز التكلفة</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">مدين</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">دائن</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">رصيد مدين</td>
+      <td style="background:#164e63;color:#fff;padding:10px 14px;font-weight:800;border:1px solid #0e7490">رصيد دائن</td>
+    </tr>
+    ${obRowHtml}
+    ${bodyHtml}
+    <tr style="height:6px"><td colspan="8"></td></tr>
+    <tr>
+      <td colspan="4" style="background:#c6eef4;padding:10px 14px;font-weight:800;color:#164e63;font-size:13px;border-top:2px solid #0e7490">📊 الإجمالي / الرصيد الختامي</td>
+      <td style="background:#c6eef4;padding:10px 14px;text-align:left;font-weight:800;color:#0f4a8a;border-top:2px solid #0e7490">${tb_fmt(totalDr)}</td>
+      <td style="background:#c6eef4;padding:10px 14px;text-align:left;font-weight:800;color:#7a4004;border-top:2px solid #0e7490">${tb_fmt(totalCr)}</td>
+      <td style="background:#c6eef4;padding:10px 14px;text-align:left;font-weight:800;color:#156a38;border-top:2px solid #0e7490">${closing>0?tb_fmt(closing):'—'}</td>
+      <td style="background:#c6eef4;padding:10px 14px;text-align:left;font-weight:800;color:#b52a2a;border-top:2px solid #0e7490">${closing<0?tb_fmt(Math.abs(closing)):'—'}</td>
+    </tr>
+  </table></body></html>`;
+  const bom='\uFEFF';
+  const blob=new Blob([bom+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='حساب_الأستاذ_'+acc.code+'_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-')+'.xls';
+  a.click();
 }
 
 // تحميل البيانات المحفوظة عند فتح البرنامج
