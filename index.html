@@ -1121,17 +1121,8 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
       <button id="undo-btn" onclick="undoLast()" style="width:100%;padding:8px;background:rgba(109,40,217,0.20);color:#b09af8;border:1px solid rgba(109,40,217,0.35);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;opacity:0.4" title="لا يوجد إجراء للتراجع">
         ↩️ تراجع عن آخر إجراء
       </button>
-      <button onclick="exportJSON_full()" style="width:100%;padding:8px;background:rgba(52,66,86,0.85);color:#a8c0d6;border:1px solid rgba(168,192,214,0.2);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="حفظ كل بيانات البرنامج">
-        💾 حفظ كامل للبرنامج
-      </button>
-      <button onclick="importJSON()" style="width:100%;padding:8px;background:rgba(30,45,61,0.7);color:#7a9ab5;border:1px solid rgba(120,160,190,0.15);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="استيراد بيانات محفوظة">
-        📂 استيراد / استعادة
-      </button>
       <button onclick="openSettingsModal()" style="width:100%;padding:8px;background:rgba(26,107,186,0.18);color:#7ec4f8;border:1px solid rgba(26,107,186,0.3);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="إعدادات النظام">
         ⚙️ إعدادات النظام
-      </button>
-      <button onclick="clearStorage()" style="width:100%;padding:8px;background:rgba(181,42,42,0.18);color:#f0a0a0;border:1px solid rgba(181,42,42,0.25);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" title="مسح البيانات المحفوظة تلقائيًا والرجوع للافتراضي">
-        🗑️ مسح الحفظ التلقائي
       </button>
     </div>
     <div id="sync-indicator" class="sync-indicator syncing">
@@ -1902,6 +1893,10 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
           <div id="ab-browser-warn" style="display:none;margin-top:6px;font-size:11.5px;background:#fff3ee;border:1px solid #fbb07a;border-radius:7px;padding:6px 10px;color:#a33209">
             ⚠️ هذه الميزة تعمل فقط على Chrome / Edge. Firefox وSafari لا يدعمانها.
           </div>
+          <div id="ab-perm-warn" style="display:none;margin-top:6px;font-size:11.5px;background:#fff3ee;border:1px solid #fbb07a;border-radius:7px;padding:8px 10px;color:#a33209;align-items:center;justify-content:space-between;gap:8px">
+            <span>🔒 الصلاحية على المجلد انتهت لهذه الجلسة — لازم تفعّلها تاني عشان الحفظ (التلقائي واليدوي) يشتغل.</span>
+            <button onclick="abReauthorize()" class="btn btn-sm" style="flex-shrink:0;font-size:11px;padding:5px 10px;background:#a33209;color:#fff;border:none">🔓 إعادة تفعيل</button>
+          </div>
         </div>
 
         <!-- وقت الحفظ -->
@@ -1931,6 +1926,19 @@ mark.rpt-hl{background:#fff176;color:var(--ink);border-radius:2px;padding:0 1px}
           💾 حفظ نسخة احتياطية الآن
         </button>
 
+      </div>
+    </div>
+
+    <!-- ─── قسم إدارة البيانات ─── -->
+    <div style="border:1.5px solid var(--border2);border-radius:12px;overflow:hidden;margin-top:14px">
+      <div style="background:var(--fog2);padding:10px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:800;color:var(--ink2);font-size:13.5px">📦 إدارة البيانات</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">حفظ كامل، استيراد/استعادة، أو مسح الحفظ التلقائي</div>
+      </div>
+      <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn" onclick="exportJSON_full()" title="حفظ كل بيانات البرنامج" style="font-size:12px;padding:9px 8px">💾 حفظ كامل للبرنامج</button>
+        <button class="btn" onclick="importJSON()" title="استيراد بيانات محفوظة" style="font-size:12px;padding:9px 8px">📂 استيراد / استعادة</button>
+        <button class="btn" onclick="clearStorage()" title="مسح البيانات المحفوظة تلقائيًا والرجوع للافتراضي" style="font-size:12px;padding:9px 8px;grid-column:1 / -1;color:#b52a2a;border-color:#e8b4b4">🗑️ مسح الحفظ التلقائي</button>
       </div>
     </div>
 
@@ -2689,6 +2697,41 @@ function abUpdateUI(){
   if(warn) warn.style.display = window.showDirectoryPicker ? 'none' : 'block';
 }
 
+// ─── Permission status (silent check, no popup) ───────────────
+// The File System Access API forgets write permission on a saved
+// folder handle once the browser/tab is closed and reopened. That
+// silent reset — not a bug in the backup code itself — is the main
+// reason both auto-backup and the manual button can stop writing
+// into the previously chosen folder without any visible error.
+async function abCheckPermissionStatus(){
+  const warnEl = document.getElementById('ab-perm-warn');
+  if(!warnEl) return;
+  if(!abDirHandle){ warnEl.style.display = 'none'; return; }
+  try{
+    const status = await abDirHandle.queryPermission({mode:'readwrite'});
+    warnEl.style.display = (status === 'granted') ? 'none' : 'flex';
+  }catch(e){
+    warnEl.style.display = 'flex';
+  }
+}
+
+// Called from a real button click, so it's allowed to show the
+// browser's permission prompt again.
+async function abReauthorize(){
+  if(!abDirHandle){ alert('⚠️ اختر مجلد الحفظ أولاً'); return; }
+  try{
+    const perm = await abDirHandle.requestPermission({mode:'readwrite'});
+    if(perm === 'granted'){
+      showToast('✅ تم تفعيل صلاحية مجلد الحفظ لهذه الجلسة', 'jrn');
+    }else{
+      alert('⚠️ لم يتم منح الصلاحية. لو استمرت المشكلة، اضغط "اختر مجلد" واختر نفس المجلد من جديد.');
+    }
+  }catch(e){
+    alert('❌ تعذّر تفعيل الصلاحية: ' + e.message);
+  }
+  abCheckPermissionStatus();
+}
+
 function abToggle(){
   abSettings.enabled = document.getElementById('ab-enabled').checked;
   localStorage.setItem('DeepSystem_AB_Settings', JSON.stringify(abSettings));
@@ -2710,6 +2753,7 @@ async function abPickFolder(){
     abSettings.folderName = handle.name;
     localStorage.setItem('DeepSystem_AB_Settings', JSON.stringify(abSettings));
     abUpdateUI();
+    abCheckPermissionStatus();
     showToast('✅ تم تحديد مجلد الحفظ: ' + handle.name, 'jrn');
   }catch(e){
     if(e.name!=='AbortError') alert('حدث خطأ أثناء اختيار المجلد: ' + e.message);
@@ -2724,11 +2768,26 @@ async function abDoBackup(manual=false){
   }
   // request permission
   let perm;
-  try{ perm = await abDirHandle.requestPermission({mode:'readwrite'}); }
-  catch(e){ perm='denied'; }
+  try{
+    if(manual){
+      // Triggered directly by a button click, so the browser allows
+      // showing the permission prompt again if it was lost.
+      perm = await abDirHandle.requestPermission({mode:'readwrite'});
+    }else{
+      // Triggered by the background timer with no user click behind
+      // it — browsers refuse to show a permission popup here, so we
+      // only check silently. If permission isn't already active for
+      // this session, we skip instead of failing invisibly, and flag
+      // it so the settings screen shows the "إعادة تفعيل" banner.
+      perm = await abDirHandle.queryPermission({mode:'readwrite'});
+    }
+  }catch(e){ perm='denied'; }
 
   if(perm!=='granted'){
-    if(manual) alert('⚠️ لم يتم منح صلاحية الكتابة في المجلد. برجاء اختيار المجلد مجدداً.');
+    if(manual){
+      alert('⚠️ لم يتم منح صلاحية الكتابة في المجلد.\nده بيحصل عادة لأن صلاحية المتصفح على المجلد بتتصفّر كل ما تقفل وتفتح المتصفح تاني.\nجرّب تضغط "إعادة تفعيل" في شاشة الإعدادات، ولو استمرت المشكلة اختر المجلد من جديد.');
+    }
+    abCheckPermissionStatus();
     return;
   }
 
@@ -2870,6 +2929,7 @@ async function abInit(){
     if(h){ abDirHandle = h; }
   }catch(e){}
   abUpdateUI();
+  abCheckPermissionStatus();
   if(abSettings.enabled) abStartTimer();
 }
 
@@ -2878,6 +2938,7 @@ const _origOpenSettings = openSettingsModal;
 openSettingsModal = function(){
   _origOpenSettings();
   abUpdateUI();
+  abCheckPermissionStatus();
 };
 
 // ════════════════════════════════════════════════════════
